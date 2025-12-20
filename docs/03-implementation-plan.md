@@ -48,15 +48,15 @@ gantt
 - [ ] Create README.md with setup instructions
 
 #### 1.2 Frontend Setup
-- [ ] Initialize Vite + React + TypeScript project
-- [ ] Install core dependencies
+- [x] Initialize Vite + React + TypeScript project
+- [x] Install core dependencies
   - React Router
   - Tailwind CSS + shadcn/ui
   - Zustand for state management
   - TanStack Query
   - Axios
-- [ ] Configure Tailwind CSS
-- [ ] Set up folder structure
+- [x] Configure Tailwind CSS
+- [x] Set up folder structure
   ```
   frontend/src/
   ├── components/        # Reusable components
@@ -67,18 +67,18 @@ gantt
   ├── types/             # TypeScript types
   └── utils/             # Utilities
   ```
-- [ ] Create base layout component
-- [ ] Set up routing structure
+- [x] Create base layout component
+- [x] Set up routing structure
 
 #### 1.3 Backend Setup
-- [ ] Initialize FastAPI project
-- [ ] Set up virtual environment
-- [ ] Install core dependencies
+- [x] Initialize FastAPI project
+- [x] Set up virtual environment
+- [x] Install core dependencies
   - FastAPI, Uvicorn
   - SQLAlchemy, Alembic
   - Pydantic Settings
   - python-jose, passlib
-- [ ] Create folder structure
+- [x] Create folder structure
   ```
   backend/
   ├── app/
@@ -92,38 +92,40 @@ gantt
   ├── tests/             # Test files
   └── requirements.txt
   ```
-- [ ] Configure environment variables (.env)
+- [x] Configure environment variables (.env)
 - [ ] Set up logging configuration
 
 #### 1.4 Database & Docker Setup
-- [ ] Create docker-compose.yml
+- [x] Create docker-compose.yml
   - PostgreSQL service
   - Redis service
-  - Backend service
-  - Frontend service (dev)
-- [ ] Configure PostgreSQL connection
-- [ ] Set up Alembic for migrations
-- [ ] Create initial database models (User, Document)
-- [ ] Run initial migration
+  - Backend service (running locally)
+  - Frontend service (dev, running locally)
+- [x] Configure PostgreSQL connection
+- [x] Set up Alembic for migrations
+- [ ] Create initial database models (User, ~~Document~~)
+  - User model created ✓
+  - Document model pending
+- [x] Run initial migration
 
 #### 1.5 Authentication System
-- [ ] Create User model and schema
-- [ ] Implement JWT token generation
-- [ ] Build registration endpoint
-- [ ] Build login endpoint
+- [x] Create User model and schema
+- [x] Implement JWT token generation
+- [x] Build registration endpoint
+- [x] Build login endpoint
 - [ ] Implement token refresh mechanism
-- [ ] Add password hashing with bcrypt
-- [ ] Create authentication middleware
-- [ ] Build protected route decorator
+- [x] Add password hashing with bcrypt
+- [x] Create authentication middleware
+- [x] Build protected route decorator
 
 #### 1.6 Frontend Auth Integration
-- [ ] Create auth store (Zustand)
-- [ ] Build login page UI
-- [ ] Build registration page UI
-- [ ] Implement auth service functions
-- [ ] Add JWT token storage (localStorage)
-- [ ] Create protected route component
-- [ ] Add axios interceptors for auth headers
+- [x] Create auth store (Zustand)
+- [x] Build login page UI
+- [x] Build registration page UI
+- [x] Implement auth service functions
+- [x] Add JWT token storage (localStorage)
+- [x] Create protected route component
+- [x] Add axios interceptors for auth headers
 
 ### Deliverables
 - ✅ Fully configured development environment
