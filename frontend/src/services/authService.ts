@@ -42,9 +42,20 @@ export const authService = {
   },
 
   /**
-   * Logout (clear token)
+   * Refresh access token using refresh token
+   */
+  async refreshToken(refreshToken: string): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/api/v1/auth/refresh', {
+      refresh_token: refreshToken,
+    });
+    return response.data;
+  },
+
+  /**
+   * Logout (clear tokens)
    */
   logout(): void {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
   },
 };

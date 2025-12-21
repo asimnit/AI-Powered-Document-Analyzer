@@ -29,6 +29,7 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
   access_token: string;
+  refresh_token: string;
   token_type: string;
 }
 
@@ -42,5 +43,6 @@ export interface AuthState {
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
   fetchCurrentUser: () => Promise<void>;
+  refreshToken: () => Promise<void>;
   clearError: () => void;
 }
