@@ -8,12 +8,18 @@ This is the heart of the backend.
 - Handles startup/shutdown events
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+import time
 
 from app.core.config import settings
 from app.core.database import engine, Base
+from app.core.logging_config import setup_logging, get_logger
 from app.api.endpoints import health, auth
+
+# Setup logging first thing
+setup_logging()
+logger = get_logger(__name__)
 
 # Create database tables
 # In production, use Alembic migrations instead
@@ -38,6 +44,33 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
+# Add request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """
+    Log all incoming requests and their response times
+    """
+    start_time = time.time()
+    
+    # Log incoming request
+    logger.info(f"➡️  {request.method} {request.url.path}")
+    
+    # Process request
+    response = await call_next(request)
+    
+    # Calculate duration
+    duration = time.time() - start_time
+    
+    # Log response
+    logger.info(
+        f"⬅️  {request.method} {request.url.path} | "
+        f"Status: {response.status_code} | "
+        f"Duration: {duration:.3f}s"
+    )
+    
+    return response
+
+
 # Include routers
 app.include_router(health.router, tags=["Health"])
 app.include_router(
@@ -53,8 +86,11 @@ async def startup_event():
     Runs when server starts
     Good place for initialization logic
     """
-    print(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} started!")
-    print(f"📖 API documentation: http://localhost:8000/docs")
+    logger.info(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} starting...")
+    logger.info(f"Environment: {'Development' if settings.DEBUG else 'Production'}")
+    logger.info(f"Database: {settings.DATABASE_URL.split('@')[1] if '@' in settings.DATABASE_URL else 'configured'}")
+    logger.info(f"📖 API documentation: http://localhost:8000/docs")
+    logger.info("✅ Application startup complete")
 
 
 @app.on_event("shutdown")
@@ -63,7 +99,8 @@ async def shutdown_event():
     Runs when server stops
     Good place for cleanup logic
     """
-    print(f"👋 {settings.APP_NAME} shutting down...")
+    logger.info(f"👋 {settings.APP_NAME} shutting down...")
+    logger.info("Cleanup complete")
 
 
 @app.get("/")
