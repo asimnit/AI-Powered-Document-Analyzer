@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     # File Upload
     UPLOAD_DIR: str = "./uploads"
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
+    ALLOWED_EXTENSIONS: set[str] = {".pdf", ".docx", ".xlsx", ".txt", ".png", ".jpg", ".jpeg"}
+    
+    # AWS S3 Configuration
+    AWS_ACCESS_KEY_ID: str = "YOUR_AWS_ACCESS_KEY_ID"
+    AWS_SECRET_ACCESS_KEY: str = "YOUR_AWS_SECRET_ACCESS_KEY"
+    AWS_REGION: str = "us-east-1"  # Change to your preferred region
+    S3_BUCKET_NAME: str = "your-document-analyzer-bucket"
+    S3_UPLOAD_ENABLED: bool = True  # Set to False to use local storage
     
     class Config:
         """Pydantic config"""

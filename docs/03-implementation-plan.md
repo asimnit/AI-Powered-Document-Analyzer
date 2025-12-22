@@ -158,62 +158,75 @@ gantt
 ### Tasks
 
 #### 2.1 Backend - Storage Configuration
-- [ ] Set up S3/MinIO connection
-- [ ] Create storage service abstraction
-- [ ] Implement file upload to object storage
-- [ ] Add file size validation
-- [ ] Create file type validation (PDF, DOCX, XLSX, images)
-- [ ] Generate unique file identifiers
-- [ ] Implement file deletion functionality
+- [x] Set up S3/MinIO connection (AWS S3 configured)
+- [x] Create storage service abstraction (S3 + local filesystem support)
+- [x] Implement file upload to object storage
+- [x] Add file size validation (10MB limit)
+- [x] Create file type validation (PDF, DOCX, XLSX, TXT, PNG, JPG, JPEG)
+- [x] Generate unique file identifiers (user_id/timestamp_uuid_filename)
+- [x] Implement file deletion functionality (S3 + database)
 
 #### 2.2 Backend - Document API
-- [ ] Create Document model
+- [x] Create Document model
   - id, user_id, filename, file_path, file_type
   - file_size, upload_date, status, metadata
-- [ ] Create document schemas (Pydantic)
-- [ ] Build POST /api/documents/upload endpoint
-- [ ] Build GET /api/documents/ endpoint (list)
-- [ ] Build GET /api/documents/{id} endpoint
-- [ ] Build DELETE /api/documents/{id} endpoint
-- [ ] Add pagination for document list
-- [ ] Implement file download endpoint
+- [x] Create document schemas (Pydantic)
+- [x] Build POST /api/v1/documents/upload endpoint
+- [x] Build GET /api/v1/documents/ endpoint (list with pagination)
+- [x] Build GET /api/v1/documents/{id} endpoint
+- [x] Build DELETE /api/v1/documents/{id} endpoint
+- [x] Add pagination for document list (page, page_size, total_pages)
+- [x] Implement file download endpoint (GET /api/v1/documents/download/{id})
+- [x] **BONUS**: Build GET /api/v1/documents/stats/overview endpoint
 
 #### 2.3 Frontend - Upload UI
-- [ ] Create upload page component
-- [ ] Integrate react-dropzone
-- [ ] Build drag-and-drop zone
-- [ ] Add file type icons
-- [ ] Show upload progress bar
-- [ ] Display file validation errors
-- [ ] Create file preview component
-- [ ] Add multi-file upload support
+- [x] Create upload page component (integrated in HomePage)
+- [x] Integrate react-dropzone
+- [x] Build drag-and-drop zone
+- [x] Add file type icons (PDF, Word, Excel, Images)
+- [x] Show upload progress bar (per-file tracking)
+- [x] Display file validation errors
+- [ ] Create file preview component (deferred to Phase 7)
+- [x] Add multi-file upload support ✨
 
 #### 2.4 Frontend - Document Management
-- [ ] Create documents list page
-- [ ] Build document card component
-- [ ] Add document metadata display
-- [ ] Implement delete confirmation modal
-- [ ] Add search/filter functionality
-- [ ] Create document detail view
-- [ ] Add loading states and skeletons
+- [x] Create documents list page (DocumentsPage with gallery view)
+- [x] Build document card component
+- [x] Add document metadata display (size, date, status)
+- [x] Implement delete confirmation modal
+- [x] Add search/filter functionality (filter by status)
+- [ ] Create document detail view (deferred - have gallery view)
+- [x] Add loading states and skeletons
 
 #### 2.5 Virus Scanning (Optional)
-- [ ] Integrate ClamAV or similar
+- [ ] Integrate ClamAV or similar (deferred to future)
 - [ ] Add virus scan before storage
 - [ ] Handle infected files
 
 ### Deliverables
-- ✅ Working file upload system
-- ✅ Document storage in S3/MinIO
-- ✅ Document list and detail views
+- ✅ Working file upload system (multi-file support)
+- ✅ Document storage in S3
+- ✅ Document list and gallery views with filters
 - ✅ File validation and error handling
+- ✅ Real-time stats dashboard
 
 ### Success Criteria
-- User can upload PDF, DOCX, XLSX files
-- Files are stored securely
-- User can view list of uploaded documents
-- User can delete their documents
-- File size limits are enforced
+- ✅ User can upload PDF, DOCX, XLSX, TXT, PNG, JPG files
+- ✅ Multiple files can be uploaded at once
+- ✅ Files are stored securely in S3
+- ✅ User can view list of uploaded documents with pagination
+- ✅ User can filter documents by status
+- ✅ User can delete their documents
+- ✅ File size limits (10MB) are enforced
+- ✅ File type validation works correctly
+- ✅ Upload progress is tracked per file
+- ✅ Dashboard shows real-time statistics
+
+### 🎉 Phase 2 Status: **COMPLETE** (Dec 22, 2025)
+- Multi-file upload with drag-and-drop working
+- Document gallery with status filters functional
+- S3 storage integration tested and verified
+- All core requirements met, bonus features added
 
 ---
 

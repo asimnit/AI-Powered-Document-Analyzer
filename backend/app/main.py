@@ -8,6 +8,7 @@ This is the heart of the backend.
 - Handles startup/shutdown events
 """
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import time
@@ -15,7 +16,7 @@ import time
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.logging_config import setup_logging, get_logger
-from app.api.endpoints import health, auth
+from app.api.endpoints import health, auth, documents
 
 # Setup logging first thing
 setup_logging()
@@ -25,6 +26,27 @@ logger = get_logger(__name__)
 # In production, use Alembic migrations instead
 # Base.metadata.create_all(bind=engine)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan event handler for startup and shutdown events
+    Replaces deprecated @app.on_event decorators
+    """
+    # Startup
+    logger.info(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} starting...")
+    logger.info(f"Environment: {'Development' if settings.DEBUG else 'Production'}")
+    logger.info(f"Database: {settings.DATABASE_URL.split('@')[1] if '@' in settings.DATABASE_URL else 'configured'}")
+    logger.info(f"📖 API documentation: http://localhost:8000/docs")
+    logger.info("✅ Application startup complete")
+    
+    yield
+    
+    # Shutdown
+    logger.info(f"👋 {settings.APP_NAME} shutting down...")
+    logger.info("Cleanup complete")
+
+
 # Create FastAPI application
 app = FastAPI(
     title=settings.APP_NAME,
@@ -32,6 +54,7 @@ app = FastAPI(
     description="AI-Powered Document Analyzer API",
     docs_url="/docs",  # Swagger UI at http://localhost:8000/docs
     redoc_url="/redoc",  # ReDoc at http://localhost:8000/redoc
+    lifespan=lifespan,
 )
 
 # Configure CORS
@@ -78,29 +101,11 @@ app.include_router(
     prefix=f"{settings.API_V1_PREFIX}/auth",
     tags=["Authentication"]
 )
-
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    Runs when server starts
-    Good place for initialization logic
-    """
-    logger.info(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} starting...")
-    logger.info(f"Environment: {'Development' if settings.DEBUG else 'Production'}")
-    logger.info(f"Database: {settings.DATABASE_URL.split('@')[1] if '@' in settings.DATABASE_URL else 'configured'}")
-    logger.info(f"📖 API documentation: http://localhost:8000/docs")
-    logger.info("✅ Application startup complete")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """
-    Runs when server stops
-    Good place for cleanup logic
-    """
-    logger.info(f"👋 {settings.APP_NAME} shutting down...")
-    logger.info("Cleanup complete")
+app.include_router(
+    documents.router,
+    prefix=f"{settings.API_V1_PREFIX}/documents",
+    tags=["Documents"]
+)
 
 
 @app.get("/")

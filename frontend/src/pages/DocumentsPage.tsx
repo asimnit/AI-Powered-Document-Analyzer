@@ -1,0 +1,355 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import documentService from '../services/documentService';
+import type { Document, ProcessingStatus } from '../types/document';
+
+/**
+ * Documents Page Component
+ * 
+ * Display, manage, and interact with uploaded documents
+ */
+const DocumentsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<ProcessingStatus | undefined>(undefined);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [page, statusFilter]);
+
+  const fetchDocuments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await documentService.getDocuments(page, 12, statusFilter);
+      setDocuments(response.documents);
+      setTotalPages(response.total_pages);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to load documents');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await documentService.deleteDocument(id);
+      setDeleteConfirm(null);
+      fetchDocuments(); // Refresh list
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to delete document');
+    }
+  };
+
+  const handleDownload = async (doc: Document) => {
+    try {
+      await documentService.downloadDocument(doc.id, doc.original_filename);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to download document');
+    }
+  };
+
+  const getStatusColor = (status: ProcessingStatus) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'processing':
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'failed':
+        return 'bg-red-100 text-red-800 border-red-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.includes('pdf')) {
+      return (
+        <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+        </svg>
+      );
+    } else if (fileType.includes('word') || fileType.includes('docx')) {
+      return (
+        <svg className="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+        </svg>
+      );
+    } else if (fileType.includes('excel') || fileType.includes('xlsx')) {
+      return (
+        <svg className="w-8 h-8 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+        </svg>
+      );
+    } else if (fileType.includes('image')) {
+      return (
+        <svg className="w-8 h-8 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-8 h-8 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+      </svg>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              My Documents
+            </span>
+          </h1>
+          <p className="text-gray-600 mt-1">Manage and explore your uploaded documents</p>
+        </div>
+        
+        <button
+          onClick={() => navigate('/')}
+          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Upload New
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-md p-4">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setStatusFilter(undefined)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              statusFilter === undefined
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setStatusFilter('uploaded' as ProcessingStatus)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              statusFilter === 'uploaded'
+                ? 'bg-gray-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Uploaded
+          </button>
+          <button
+            onClick={() => setStatusFilter('processing' as ProcessingStatus)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              statusFilter === 'processing'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Processing
+          </button>
+          <button
+            onClick={() => setStatusFilter('completed' as ProcessingStatus)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              statusFilter === 'completed'
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Completed
+          </button>
+          <button
+            onClick={() => setStatusFilter('failed' as ProcessingStatus)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              statusFilter === 'failed'
+                ? 'bg-red-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Failed
+          </button>
+        </div>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded-lg flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {error}
+        </div>
+      )}
+
+      {/* Documents Grid */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      ) : documents.length === 0 ? (
+        <div className="text-center py-20">
+          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">No documents found</h3>
+          <p className="text-gray-600 mb-4">Start by uploading your first document</p>
+          <button
+            onClick={() => navigate('/')}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Upload Document
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {documents.map((doc) => (
+              <div
+                key={doc.id}
+                className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-blue-200 group"
+              >
+                {/* Delete Confirmation Modal */}
+                {deleteConfirm === doc.id && (
+                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-10 flex items-center justify-center p-4 rounded-xl">
+                    <div className="bg-white rounded-lg p-6 max-w-sm">
+                      <h3 className="text-lg font-bold text-gray-900 mb-2">Confirm Delete</h3>
+                      <p className="text-gray-600 mb-4">
+                        Are you sure you want to delete "{doc.original_filename}"? This action cannot be undone.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDelete(doc.id)}
+                          className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(null)}
+                          className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-6">
+                  {/* File Icon */}
+                  <div className="mb-4">
+                    {getFileIcon(doc.file_type)}
+                  </div>
+
+                  {/* File Name */}
+                  <h3 className="font-semibold text-gray-900 mb-2 truncate" title={doc.original_filename}>
+                    {doc.original_filename}
+                  </h3>
+
+                  {/* Status Badge */}
+                  <div className="mb-3">
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(doc.processing_status)}`}>
+                      {doc.processing_status}
+                    </span>
+                  </div>
+
+                  {/* Metadata */}
+                  <div className="space-y-1 text-sm text-gray-600 mb-4">
+                    <p className="flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      {doc.file_size_mb.toFixed(2)} MB
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {doc.upload_date ? new Date(doc.upload_date).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : 'N/A'}
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleDownload(doc)}
+                      className="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm flex items-center justify-center gap-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(doc.id)}
+                      className="bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-100 transition-colors font-medium text-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-8">
+              <button
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+                className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              
+              <div className="flex gap-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    onClick={() => setPage(pageNum)}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      page === pageNum
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page === totalPages}
+                className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+export default DocumentsPage;
