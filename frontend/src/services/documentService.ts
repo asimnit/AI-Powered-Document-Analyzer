@@ -108,6 +108,14 @@ export const getDocumentStats = async (): Promise<DocumentStats> => {
   return response.data;
 };
 
+/**
+ * Trigger document processing
+ */
+export const processDocument = async (id: number): Promise<{ message: string; task_id: string; status: string }> => {
+  const response = await api.post<{ message: string; task_id: string; status: string }>(`/api/v1/documents/${id}/process`);
+  return response.data;
+};
+
 const documentService = {
   uploadDocument,
   getDocuments,
@@ -115,6 +123,7 @@ const documentService = {
   deleteDocument,
   downloadDocument,
   getDocumentStats,
+  processDocument,
 };
 
 export default documentService;

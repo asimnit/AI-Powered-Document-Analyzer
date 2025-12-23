@@ -16,7 +16,7 @@ import time
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.logging_config import setup_logging, get_logger
-from app.api.endpoints import health, auth, documents
+from app.api.endpoints import health, auth, documents, websocket
 
 # Setup logging first thing
 setup_logging()
@@ -105,6 +105,10 @@ app.include_router(
     documents.router,
     prefix=f"{settings.API_V1_PREFIX}/documents",
     tags=["Documents"]
+)
+app.include_router(
+    websocket.router,
+    tags=["WebSocket"]
 )
 
 

@@ -16,17 +16,17 @@ export const ProcessingStatus = {
 export interface Document {
   id: number;
   filename: string;
-  original_filename: string;
+  original_filename?: string;
   file_type: string;
-  file_size: number;
-  s3_path: string;
-  processing_status: ProcessingStatus;
-  upload_date: string;  // Changed from uploaded_at to upload_date
+  file_size?: number;
+  file_size_mb: number;
+  s3_path?: string;
+  status: ProcessingStatus;  // Changed from processing_status to match backend
+  upload_date: string;
   processed_at?: string;
   error_message?: string;
-  user_id: number;
+  user_id?: number;
   // Computed properties
-  file_size_mb: number;
   is_ready_for_query: boolean;
 }
 

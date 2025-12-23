@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import documentService from '../services/documentService';
 import type { Document, ProcessingStatus } from '../types/document';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 /**
  * Documents Page Component
  * 
  * Display, manage, and interact with uploaded documents
+ * Includes real-time updates via WebSocket
  */
 const DocumentsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -17,6 +19,32 @@ const DocumentsPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ProcessingStatus | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+
+  // WebSocket connection for real-time updates
+  const handleDocumentUpdate = useCallback((update: any) => {
+    console.log('Document update received:', update);
+    console.log('Update status:', update.status, 'Message:', update.message);
+    
+    setDocuments((prevDocuments) => 
+      prevDocuments.map((doc) => {
+        if (doc.id === update.document_id) {
+          console.log('Updating document:', doc.id, 'Old status:', doc.status, 'New status:', update.status);
+          
+          const updatedDoc = {
+            ...doc,
+            status: update.status as ProcessingStatus,
+            error_message: update.message || doc.error_message
+          };
+          
+          console.log('Updated doc:', updatedDoc);
+          return updatedDoc;
+        }
+        return doc;
+      })
+    );
+  }, []);
+
+  const { isConnected } = useWebSocket(handleDocumentUpdate);
 
   useEffect(() => {
     fetchDocuments();
@@ -48,9 +76,19 @@ const DocumentsPage: React.FC = () => {
 
   const handleDownload = async (doc: Document) => {
     try {
-      await documentService.downloadDocument(doc.id, doc.original_filename);
+      await documentService.downloadDocument(doc.id, doc.original_filename || doc.filename);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to download document');
+    }
+  };
+
+  const handleProcess = async (id: number) => {
+    try {
+      await documentService.processDocument(id);
+      // Refresh documents to show updated status
+      fetchDocuments();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to start processing');
     }
   };
 
@@ -126,6 +164,15 @@ const DocumentsPage: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-md p-4">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-sm font-semibold text-gray-700">Filters</h3>
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 text-xs ${isConnected ? 'text-green-600' : 'text-gray-400'}`}>
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
+              {isConnected ? 'Live updates' : 'Reconnecting...'}
+            </div>
+          </div>
+        </div>
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setStatusFilter(undefined)}
@@ -258,10 +305,22 @@ const DocumentsPage: React.FC = () => {
 
                   {/* Status Badge */}
                   <div className="mb-3">
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(doc.processing_status)}`}>
-                      {doc.processing_status}
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(doc.status)}`}>
+                      {doc.status.charAt(0).toUpperCase() + doc.status.slice(1).toLowerCase()}
                     </span>
                   </div>
+
+                  {/* Error Message */}
+                  {doc.status.toLowerCase() === 'failed' && doc.error_message && (
+                    <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-xs text-red-600 flex items-start gap-1">
+                        <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        <span className="flex-1">{doc.error_message}</span>
+                      </p>
+                    </div>
+                  )}
 
                   {/* Metadata */}
                   <div className="space-y-1 text-sm text-gray-600 mb-4">
@@ -287,6 +346,35 @@ const DocumentsPage: React.FC = () => {
 
                   {/* Actions */}
                   <div className="flex gap-2">
+                    {/* Process Button - only for uploaded documents */}
+                    {doc.status.toLowerCase() === 'uploaded' && (
+                      <button
+                        onClick={() => handleProcess(doc.id)}
+                        className="flex-1 bg-green-50 text-green-600 px-3 py-2 rounded-lg hover:bg-green-100 transition-colors font-medium text-sm flex items-center justify-center gap-1"
+                        title={doc.file_type.includes('image') || ['png', 'jpg', 'jpeg'].includes(doc.file_type.toLowerCase()) ? 'Note: Image processing requires Tesseract OCR to be installed' : 'Start processing this document'}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Process
+                      </button>
+                    )}
+                    
+                    {/* Retry Button - for failed documents */}
+                    {doc.status.toLowerCase() === 'failed' && (
+                      <button
+                        onClick={() => handleProcess(doc.id)}
+                        className="flex-1 bg-orange-50 text-orange-600 px-3 py-2 rounded-lg hover:bg-orange-100 transition-colors font-medium text-sm flex items-center justify-center gap-1"
+                        title="Retry processing this document"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Retry
+                      </button>
+                    )}
+                    
                     <button
                       onClick={() => handleDownload(doc)}
                       className="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm flex items-center justify-center gap-1"

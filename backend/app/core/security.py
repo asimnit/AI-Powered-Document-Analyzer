@@ -178,3 +178,36 @@ async def get_current_active_user(
             detail="Inactive user"
         )
     return current_user
+
+
+async def get_current_user_ws(token: str, db: Session):
+    """
+    Get current user from JWT token for WebSocket connections
+    
+    Similar to get_current_user but accepts token as parameter instead of Depends.
+    Used for WebSocket endpoints where we can't use FastAPI dependencies.
+    
+    Args:
+        token: JWT token from query parameter
+        db: Database session
+        
+    Returns:
+        User object
+        
+    Raises:
+        ValueError: If token is invalid or user not found
+    """
+    from app.models.user import User
+    
+    user_id = verify_token(token, token_type="access")
+    if user_id is None:
+        raise ValueError("Could not validate credentials")
+    
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if user is None:
+        raise ValueError("User not found")
+    
+    if not user.is_active:
+        raise ValueError("Inactive user")
+    
+    return user

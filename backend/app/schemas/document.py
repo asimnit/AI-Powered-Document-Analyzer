@@ -67,6 +67,7 @@ class DocumentSummary(BaseModel):
     file_size_mb: float
     upload_date: datetime
     status: ProcessingStatus
+    error_message: Optional[str] = None
     is_ready_for_query: bool
     
     model_config = ConfigDict(from_attributes=True)

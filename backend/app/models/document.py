@@ -66,6 +66,8 @@ class Document(Base):
     extracted_text = Column(Text, nullable=True)                # Full text extracted from document
     summary = Column(Text, nullable=True)                       # AI-generated summary
     page_count = Column(Integer, nullable=True)                 # Number of pages (if applicable)
+    word_count = Column(Integer, nullable=True)                 # Total word count
+    language = Column(String(10), nullable=True)                # Detected language code (e.g., "en", "es")
     
     # Error Handling
     error_message = Column(Text, nullable=True)                 # Error details if processing failed
@@ -76,6 +78,7 @@ class Document(Base):
     
     # Relationships
     user = relationship("User", back_populates="documents")
+    chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
     # Future: queries = relationship("Query", back_populates="document")  # Q&A history
     
     def __repr__(self):

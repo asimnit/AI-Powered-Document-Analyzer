@@ -195,6 +195,7 @@ async def list_documents(
                 file_size_mb=doc.file_size_mb,
                 upload_date=doc.upload_date,
                 status=doc.status,
+                error_message=doc.error_message,
                 is_ready_for_query=doc.is_ready_for_query
             )
             for doc in documents
@@ -440,4 +441,71 @@ async def download_document(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to download document: {str(e)}"
+        )
+
+
+@router.post("/{document_id}/process", status_code=status.HTTP_202_ACCEPTED)
+async def process_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Trigger document processing
+    
+    Queues the document for background processing:
+    - Text extraction
+    - Language detection
+    - Text chunking
+    - Storage in database
+    
+    Returns immediately with task ID for tracking.
+    """
+    try:
+        # Get document
+        document = db.query(Document).filter(
+            Document.id == document_id,
+            Document.user_id == current_user.id,
+            Document.is_deleted == False
+        ).first()
+        
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found"
+            )
+        
+        # Check if already processing or completed
+        if document.status == ProcessingStatus.PROCESSING:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Document is already being processed"
+            )
+        
+        if document.status == ProcessingStatus.COMPLETED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Document has already been processed"
+            )
+        
+        # Queue the task
+        from app.tasks.document_tasks import process_document_task
+        task = process_document_task.delay(document_id)
+        
+        logger.info(f"✅ Queued processing for document {document_id}, task_id: {task.id}")
+        
+        return {
+            "message": "Document processing started",
+            "document_id": document_id,
+            "task_id": task.id,
+            "status": "queued"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Failed to queue document processing: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to start processing: {str(e)}"
         )
