@@ -10,6 +10,7 @@ from typing import Dict, Set
 import json
 import logging
 import asyncio
+import redis
 import redis.asyncio as aioredis
 
 from app.core.security import get_current_user_ws
@@ -120,7 +121,6 @@ async def websocket_endpoint(
     
     # Authenticate user
     try:
-        from app.core.database import SessionLocal
         db = SessionLocal()
         user = await get_current_user_ws(token, db)
         user_id = user.id
@@ -230,9 +230,6 @@ def broadcast_document_update_sync(user_id: int, document_id: int, status: str, 
         message: Optional status message
         data: Additional data to include
     """
-    import redis
-    from app.core.config import settings
-    
     update_data = {
         "document_id": document_id,
         "status": status,

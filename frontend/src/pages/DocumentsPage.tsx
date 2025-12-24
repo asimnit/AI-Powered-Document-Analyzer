@@ -76,7 +76,7 @@ const DocumentsPage: React.FC = () => {
 
   const handleDownload = async (doc: Document) => {
     try {
-      await documentService.downloadDocument(doc.id, doc.original_filename || doc.filename);
+      await documentService.downloadDocument(doc.id, doc.filename);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to download document');
     }
@@ -272,7 +272,7 @@ const DocumentsPage: React.FC = () => {
                     <div className="bg-white rounded-lg p-6 max-w-sm">
                       <h3 className="text-lg font-bold text-gray-900 mb-2">Confirm Delete</h3>
                       <p className="text-gray-600 mb-4">
-                        Are you sure you want to delete "{doc.original_filename}"? This action cannot be undone.
+                        Are you sure you want to delete "{doc.filename}"? This action cannot be undone.
                       </p>
                       <div className="flex gap-2">
                         <button
@@ -299,8 +299,8 @@ const DocumentsPage: React.FC = () => {
                   </div>
 
                   {/* File Name */}
-                  <h3 className="font-semibold text-gray-900 mb-2 truncate" title={doc.original_filename}>
-                    {doc.original_filename}
+                  <h3 className="font-semibold text-gray-900 mb-2 truncate" title={doc.filename}>
+                    {doc.filename}
                   </h3>
 
                   {/* Status Badge */}

@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.models.user import User
 
 # OAuth2 scheme for token authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
@@ -136,8 +137,6 @@ async def get_current_user(
     Raises:
         HTTPException: If token is invalid or user not found
     """
-    from app.models.user import User
-    
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -197,8 +196,6 @@ async def get_current_user_ws(token: str, db: Session):
     Raises:
         ValueError: If token is invalid or user not found
     """
-    from app.models.user import User
-    
     user_id = verify_token(token, token_type="access")
     if user_id is None:
         raise ValueError("Could not validate credentials")

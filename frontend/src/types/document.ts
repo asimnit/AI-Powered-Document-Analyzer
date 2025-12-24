@@ -16,7 +16,6 @@ export const ProcessingStatus = {
 export interface Document {
   id: number;
   filename: string;
-  original_filename?: string;
   file_type: string;
   file_size?: number;
   file_size_mb: number;
