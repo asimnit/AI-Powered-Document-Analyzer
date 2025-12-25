@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDropzone } from 'react-dropzone';
 import documentService from '../services/documentService';
 import type { Document, ProcessingStatus } from '../types/document';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -19,6 +20,10 @@ const DocumentsPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ProcessingStatus | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string[]>([]);
 
   // WebSocket connection for real-time updates
   const handleDocumentUpdate = useCallback((update: any) => {
@@ -45,6 +50,90 @@ const DocumentsPage: React.FC = () => {
   }, []);
 
   const { isConnected } = useWebSocket(handleDocumentUpdate);
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0) return;
+
+    // Validate file types and sizes
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'image/png',
+      'image/jpeg',
+      'image/jpg'
+    ];
+
+    const invalidFiles = acceptedFiles.filter(file => !allowedTypes.includes(file.type));
+    const oversizedFiles = acceptedFiles.filter(file => file.size > 10 * 1024 * 1024);
+
+    if (invalidFiles.length > 0) {
+      setUploadError(`Invalid file type(s): ${invalidFiles.map(f => f.name).join(', ')}`);
+      return;
+    }
+
+    if (oversizedFiles.length > 0) {
+      setUploadError(`File(s) too large (max 10MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+    setUploadSuccess([]);
+    setUploadProgress({});
+
+    const successfulUploads: string[] = [];
+    const failedUploads: string[] = [];
+
+    // Upload files sequentially
+    for (const file of acceptedFiles) {
+      try {
+        const response = await documentService.uploadDocument(file, (percentage) => {
+          setUploadProgress(prev => ({ ...prev, [file.name]: percentage }));
+        });
+
+        successfulUploads.push(file.name);
+        setUploadSuccess(prev => [...prev, file.name]);
+      } catch (error: any) {
+        failedUploads.push(file.name);
+        console.error(`Failed to upload ${file.name}:`, error);
+      }
+    }
+
+    // Refresh documents list
+    await fetchDocuments();
+
+    // Show error if any uploads failed
+    if (failedUploads.length > 0) {
+      setUploadError(`Failed to upload: ${failedUploads.join(', ')}`);
+    }
+
+    // Clear messages after 5 seconds
+    setTimeout(() => {
+      setUploadSuccess([]);
+      setUploadProgress({});
+      setUploadError(null);
+    }, 5000);
+
+    setIsUploading(false);
+  }, []);
+
+  const { getRootProps, getInputProps, open } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'text/plain': ['.txt'],
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+    },
+    multiple: true,
+    disabled: isUploading,
+    noClick: true,
+    noKeyboard: true,
+  });
 
   useEffect(() => {
     fetchDocuments();
@@ -140,6 +229,8 @@ const DocumentsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <input {...getInputProps()} />
+      
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -152,15 +243,62 @@ const DocumentsPage: React.FC = () => {
         </div>
         
         <button
-          onClick={() => navigate('/')}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center gap-2"
+          onClick={open}
+          disabled={isUploading}
+          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
-          Upload New
+          {isUploading ? 'Uploading...' : 'Upload New'}
         </button>
       </div>
+
+      {/* Upload Feedback */}
+      {uploadError && (
+        <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded-lg flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {uploadError}
+        </div>
+      )}
+      {uploadSuccess.length > 0 && (
+        <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded-lg">
+          <p className="flex items-center gap-2 font-semibold mb-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Successfully uploaded {uploadSuccess.length} file(s)
+          </p>
+          <ul className="ml-7 text-sm space-y-1">
+            {uploadSuccess.map((filename, idx) => (
+              <li key={idx}>✓ {filename}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {isUploading && Object.keys(uploadProgress).length > 0 && (
+        <div className="bg-blue-50 border border-blue-300 text-blue-800 px-4 py-3 rounded-lg">
+          <p className="font-semibold mb-2">Uploading files...</p>
+          <div className="space-y-2">
+            {Object.entries(uploadProgress).map(([filename, progress]) => (
+              <div key={filename}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="truncate max-w-xs">{filename}</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-md p-4">
@@ -252,10 +390,11 @@ const DocumentsPage: React.FC = () => {
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No documents found</h3>
           <p className="text-gray-600 mb-4">Start by uploading your first document</p>
           <button
-            onClick={() => navigate('/')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            onClick={open}
+            disabled={isUploading}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Upload Document
+            {isUploading ? 'Uploading...' : 'Upload Document'}
           </button>
         </div>
       ) : (
@@ -264,7 +403,7 @@ const DocumentsPage: React.FC = () => {
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-blue-200 group"
+                className="relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-blue-200 group"
               >
                 {/* Delete Confirmation Modal */}
                 {deleteConfirm === doc.id && (
@@ -277,13 +416,13 @@ const DocumentsPage: React.FC = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleDelete(doc.id)}
-                          className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+                          className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 active:scale-95 active:bg-red-800 transition-all duration-150 font-medium"
                         >
                           Delete
                         </button>
                         <button
                           onClick={() => setDeleteConfirm(null)}
-                          className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                          className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 active:scale-95 active:bg-gray-400 transition-all duration-150 font-medium"
                         >
                           Cancel
                         </button>
@@ -386,7 +525,7 @@ const DocumentsPage: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(doc.id)}
-                      className="bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-100 transition-colors font-medium text-sm"
+                      className="bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-100 active:scale-95 active:bg-red-200 transition-all duration-150 font-medium text-sm"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
