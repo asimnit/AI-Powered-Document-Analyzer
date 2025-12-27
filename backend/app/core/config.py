@@ -54,6 +54,25 @@ class Settings(BaseSettings):
     S3_BUCKET_NAME: str = "your-document-analyzer-bucket"
     S3_UPLOAD_ENABLED: bool = True  # Set to False to use local storage
     
+    # LLM Provider Configuration
+    LLM_PROVIDER: str = "azure"  # azure, openai, ollama (future)
+    
+    # Azure OpenAI Configuration
+    AZURE_OPENAI_ENDPOINT: str = "https://your-resource.openai.azure.com/"
+    AZURE_OPENAI_API_KEY: str = "your-azure-openai-api-key"
+    AZURE_OPENAI_API_VERSION: str = "2024-02-15-preview"
+    AZURE_EMBEDDING_DEPLOYMENT: str = "text-embedding-3-small"  # Your deployment name
+    AZURE_CHAT_DEPLOYMENT: str = "gpt-4o-mini"  # Your deployment name
+    
+    # Embedding Configuration
+    EMBEDDING_DIMENSION: int = 1536  # text-embedding-3-small dimension
+    EMBEDDING_BATCH_SIZE: int = 100  # Process 100 texts at a time
+    
+    # RAG Configuration
+    RAG_TOP_K: int = 5  # Retrieve top 5 most relevant chunks
+    RAG_TEMPERATURE: float = 0.7  # LLM temperature for chat
+    RAG_MAX_TOKENS: int = 1000  # Max tokens in response
+    
     class Config:
         """Pydantic config"""
         env_file = ".env"

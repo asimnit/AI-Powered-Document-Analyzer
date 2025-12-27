@@ -42,5 +42,14 @@ Pillow==11.0.0
 # tiktoken==0.8.0  # Commented out - requires Rust compiler on Windows, will use character-based chunking instead
 langdetect==1.0.9
 
+# AI/ML - LangChain & Azure OpenAI
+langchain>=0.3.0
+langchain-openai>=0.2.0
+langchain-community>=0.3.0
+openai>=1.50.0
+
+# Vector Database
+pgvector>=0.3.0
+
 # WebSocket
 websockets==12.0

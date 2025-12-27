@@ -20,11 +20,15 @@ class ProcessingStatus(str, enum.Enum):
     
     Tracks the lifecycle of a document from upload to processing completion
     """
-    UPLOADED = "uploaded"           # Just uploaded, awaiting processing
-    PROCESSING = "processing"       # Currently being analyzed by AI
-    COMPLETED = "completed"         # Processing complete, ready to query
-    FAILED = "failed"              # Processing failed, check error message
-    DELETED = "deleted"            # Soft delete - marked for deletion
+    UPLOADED = "UPLOADED"           # Just uploaded, awaiting processing
+    PROCESSING = "PROCESSING"       # Currently being analyzed by AI
+    COMPLETED = "COMPLETED"         # Processing complete, ready to query
+    FAILED = "FAILED"              # Processing failed, check error message
+    DELETED = "DELETED"            # Soft delete - marked for deletion
+    INDEXING = "INDEXING"          # Generating embeddings for search
+    INDEXED = "INDEXED"            # Embeddings generated successfully
+    PARTIALLY_INDEXED = "PARTIALLY_INDEXED"  # Some embeddings failed
+    INDEXING_FAILED = "INDEXING_FAILED"      # Embedding generation failed
 
 
 class Document(Base):

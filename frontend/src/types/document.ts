@@ -4,13 +4,18 @@
  * TypeScript interfaces matching backend Pydantic schemas
  */
 
-export type ProcessingStatus = "uploaded" | "processing" | "completed" | "failed";
+export type ProcessingStatus = "uploaded" | "processing" | "completed" | "failed" | "deleted" | "indexing" | "indexed" | "partially_indexed" | "indexing_failed";
 
 export const ProcessingStatus = {
   UPLOADED: "uploaded" as const,
   PROCESSING: "processing" as const,
   COMPLETED: "completed" as const,
   FAILED: "failed" as const,
+  DELETED: "deleted" as const,
+  INDEXING: "indexing" as const,
+  INDEXED: "indexed" as const,
+  PARTIALLY_INDEXED: "partially_indexed" as const,
+  INDEXING_FAILED: "indexing_failed" as const,
 };
 
 export interface Document {

@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database with pgvector
   postgres:
-    image: postgres:15-alpine
+    image: ankane/pgvector:latest
     container_name: docanalyzer-postgres
     environment:
       POSTGRES_USER: postgres

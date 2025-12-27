@@ -11,6 +11,7 @@ Documents are split into smaller chunks for:
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, JSON, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
+from pgvector.sqlalchemy import Vector
 
 from app.core.database import Base
 
@@ -50,8 +51,12 @@ class DocumentChunk(Base):
     # Metadata (use chunk_metadata to avoid SQLAlchemy's reserved 'metadata' name)
     chunk_metadata = Column(JSON, nullable=True)               # Additional chunk metadata (language, etc.)
     
+    # Vector Embedding (for semantic search)
+    embedding = Column(Vector(1536), nullable=True)            # 1536-dimensional embedding vector
+    
     # Timestamp
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    indexed_at = Column(DateTime, nullable=True)               # When embedding was generated
     
     # Relationships
     document = relationship("Document", back_populates="chunks")

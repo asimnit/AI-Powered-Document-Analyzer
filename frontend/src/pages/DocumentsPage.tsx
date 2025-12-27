@@ -11,6 +11,25 @@ import { useWebSocket } from '../hooks/useWebSocket';
  * Display, manage, and interact with uploaded documents
  * Includes real-time updates via WebSocket
  */
+
+// Helper function to convert error details to string
+const getErrorMessage = (err: any, defaultMessage: string): string => {
+  const detail = err.response?.data?.detail;
+  
+  // If detail is an array (validation errors), format them
+  if (Array.isArray(detail)) {
+    return detail.map((e: any) => e.msg || JSON.stringify(e)).join('; ');
+  }
+  
+  // If detail is an object, stringify it
+  if (typeof detail === 'object' && detail !== null) {
+    return JSON.stringify(detail);
+  }
+  
+  // Otherwise use detail as string or default message
+  return detail || defaultMessage;
+};
+
 const DocumentsPage: React.FC = () => {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -147,7 +166,7 @@ const DocumentsPage: React.FC = () => {
       setDocuments(response.documents);
       setTotalPages(response.total_pages);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load documents');
+      setError(getErrorMessage(err, 'Failed to load documents'));
     } finally {
       setLoading(false);
     }
@@ -159,7 +178,7 @@ const DocumentsPage: React.FC = () => {
       setDeleteConfirm(null);
       fetchDocuments(); // Refresh list
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to delete document');
+      setError(getErrorMessage(err, 'Failed to delete document'));
     }
   };
 
@@ -167,7 +186,7 @@ const DocumentsPage: React.FC = () => {
     try {
       await documentService.downloadDocument(doc.id, doc.filename);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to download document');
+      setError(getErrorMessage(err, 'Failed to download document'));
     }
   };
 
@@ -177,18 +196,33 @@ const DocumentsPage: React.FC = () => {
       // Refresh documents to show updated status
       fetchDocuments();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to start processing');
+      setError(getErrorMessage(err, 'Failed to start processing'));
+    }
+  };
+
+  const handleRetryIndexing = async (id: number) => {
+    try {
+      await documentService.retryIndexing(id);
+      // Refresh documents to show updated status
+      fetchDocuments();
+    } catch (err: any) {
+      setError(getErrorMessage(err, 'Failed to retry indexing'));
     }
   };
 
   const getStatusColor = (status: ProcessingStatus) => {
     switch (status) {
       case 'completed':
+      case 'indexed':
         return 'bg-green-100 text-green-800 border-green-300';
       case 'processing':
+      case 'indexing':
         return 'bg-blue-100 text-blue-800 border-blue-300';
       case 'failed':
+      case 'indexing_failed':
         return 'bg-red-100 text-red-800 border-red-300';
+      case 'partially_indexed':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -445,14 +479,22 @@ const DocumentsPage: React.FC = () => {
                   {/* Status Badge */}
                   <div className="mb-3">
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(doc.status)}`}>
-                      {doc.status.charAt(0).toUpperCase() + doc.status.slice(1).toLowerCase()}
+                      {doc.status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                     </span>
                   </div>
 
                   {/* Error Message */}
-                  {doc.status.toLowerCase() === 'failed' && doc.error_message && (
-                    <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-xs text-red-600 flex items-start gap-1">
+                  {(doc.status === 'failed' || doc.status === 'indexing_failed' || doc.status === 'partially_indexed') && doc.error_message && (
+                    <div className={`mb-3 p-2 border rounded-lg ${
+                      doc.status === 'partially_indexed' 
+                        ? 'bg-yellow-50 border-yellow-200' 
+                        : 'bg-red-50 border-red-200'
+                    }`}>
+                      <p className={`text-xs flex items-start gap-1 ${
+                        doc.status === 'partially_indexed' 
+                          ? 'text-yellow-700' 
+                          : 'text-red-600'
+                      }`}>
                         <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                         </svg>
@@ -511,6 +553,20 @@ const DocumentsPage: React.FC = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                         Retry
+                      </button>
+                    )}
+                    
+                    {/* Retry Indexing Button - for indexing_failed and partially_indexed documents */}
+                    {(doc.status.toLowerCase() === 'indexing_failed' || doc.status.toLowerCase() === 'partially_indexed') && (
+                      <button
+                        onClick={() => handleRetryIndexing(doc.id)}
+                        className="flex-1 bg-yellow-50 text-yellow-700 px-3 py-2 rounded-lg hover:bg-yellow-100 transition-colors font-medium text-sm flex items-center justify-center gap-1"
+                        title="Retry generating embeddings for this document"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Retry Indexing
                       </button>
                     )}
                     

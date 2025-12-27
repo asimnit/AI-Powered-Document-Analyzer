@@ -4,7 +4,7 @@ Document Schemas
 Pydantic models for document API request/response validation
 """
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_serializer
 from datetime import datetime
 from typing import Optional
 
@@ -22,6 +22,11 @@ class DocumentUploadResponse(BaseModel):
     status: ProcessingStatus
     upload_date: datetime
     message: str = "Document uploaded successfully"
+    
+    @field_serializer('status')
+    def serialize_status(self, status: ProcessingStatus) -> str:
+        """Convert status enum to lowercase for frontend consistency"""
+        return status.value.lower()
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -47,6 +52,11 @@ class DocumentResponse(BaseModel):
     file_size_mb: float
     is_ready_for_query: bool
     
+    @field_serializer('status')
+    def serialize_status(self, status: ProcessingStatus) -> str:
+        """Convert status enum to lowercase for frontend consistency"""
+        return status.value.lower()
+    
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -69,6 +79,11 @@ class DocumentSummary(BaseModel):
     status: ProcessingStatus
     error_message: Optional[str] = None
     is_ready_for_query: bool
+    
+    @field_serializer('status')
+    def serialize_status(self, status: ProcessingStatus) -> str:
+        """Convert status enum to lowercase for frontend consistency"""
+        return status.value.lower()
     
     model_config = ConfigDict(from_attributes=True)
 

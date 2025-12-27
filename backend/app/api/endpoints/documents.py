@@ -154,7 +154,7 @@ async def upload_document(
 async def list_documents(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    status_filter: Optional[ProcessingStatus] = Query(None, description="Filter by status"),
+    status_filter: Optional[str] = Query(None, description="Filter by status"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -172,9 +172,11 @@ async def list_documents(
         # Base query - user's documents only
         query = db.query(Document).filter(Document.user_id == current_user.id)
         
-        # Apply status filter if provided
+        # Apply status filter if provided (convert lowercase to uppercase for enum match)
         if status_filter:
-            query = query.filter(Document.status == status_filter)
+            status_enum = ProcessingStatus[status_filter.upper()] if status_filter.upper() in ProcessingStatus.__members__ else None
+            if status_enum:
+                query = query.filter(Document.status == status_enum)
         
         # Get total count
         total = query.count()
@@ -508,4 +510,71 @@ async def process_document(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to start processing: {str(e)}"
+        )
+
+
+@router.post("/{document_id}/retry-indexing", status_code=status.HTTP_202_ACCEPTED)
+async def retry_document_indexing(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Retry embedding generation for a document
+    
+    Used when indexing fails or partially completes.
+    Queues the document for embedding generation:
+    - Regenerates embeddings for all chunks
+    - Updates document status
+    
+    Returns immediately with task ID for tracking.
+    """
+    try:
+        # Get document
+        document = db.query(Document).filter(
+            Document.id == document_id,
+            Document.user_id == current_user.id,
+            Document.is_deleted == False
+        ).first()
+        
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found"
+            )
+        
+        # Check if document has chunks (text processing must be complete)
+        if document.status not in [ProcessingStatus.COMPLETED, ProcessingStatus.INDEXING_FAILED, ProcessingStatus.PARTIALLY_INDEXED, ProcessingStatus.INDEXED]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Document must be processed before indexing can be retried"
+            )
+        
+        # Check if already indexing
+        if document.status == ProcessingStatus.INDEXING:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Document is already being indexed"
+            )
+        
+        # Queue the embedding generation task
+        from app.tasks.document_tasks import generate_embeddings_task
+        task = generate_embeddings_task.delay(document_id)
+        
+        logger.info(f"✅ Queued indexing retry for document {document_id}, task_id: {task.id}")
+        
+        return {
+            "message": "Document indexing started",
+            "document_id": document_id,
+            "task_id": task.id,
+            "status": "queued"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Failed to queue document indexing: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to start indexing: {str(e)}"
         )

@@ -116,6 +116,14 @@ export const processDocument = async (id: number): Promise<{ message: string; ta
   return response.data;
 };
 
+/**
+ * Retry document indexing (embedding generation)
+ */
+export const retryIndexing = async (id: number): Promise<{ message: string; task_id: string; status: string }> => {
+  const response = await api.post<{ message: string; task_id: string; status: string }>(`/api/v1/documents/${id}/retry-indexing`);
+  return response.data;
+};
+
 const documentService = {
   uploadDocument,
   getDocuments,
@@ -124,6 +132,7 @@ const documentService = {
   downloadDocument,
   getDocumentStats,
   processDocument,
+  retryIndexing,
 };
 
 export default documentService;
