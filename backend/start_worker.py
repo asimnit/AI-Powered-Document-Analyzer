@@ -18,6 +18,6 @@ if __name__ == "__main__":
     celery_app.worker_main([
         "worker",
         "--loglevel=info",
-        "--concurrency=2",  # Process 2 documents at a time
+        "--concurrency=10",  # Process 10 documents at a time (optimal for 20-core system)
         "--pool=solo" if sys.platform == "win32" else "--pool=prefork",  # Windows compatibility
     ])

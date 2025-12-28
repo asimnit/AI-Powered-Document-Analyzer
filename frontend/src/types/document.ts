@@ -30,6 +30,7 @@ export interface Document {
   processed_at?: string;
   error_message?: string;
   user_id?: number;
+  store_name?: string;  // Name of the store this document belongs to
   // Computed properties
   is_ready_for_query: boolean;
 }

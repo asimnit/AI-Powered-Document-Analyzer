@@ -43,7 +43,7 @@ class TextChunker:
         self,
         chunk_size: int = 2000,
         chunk_overlap: int = 200,
-        min_chunk_size: int = 100
+        min_chunk_size: int = 10
     ):
         """
         Initialize chunker

@@ -30,7 +30,9 @@ from app.schemas.document import (
     DocumentDeleteResponse,
     DocumentStats
 )
+from app.schemas.store import MoveDocumentRequest
 from app.services.storage import storage_service
+from app.services.store_service import store_service
 from app.core.config import settings
 
 router = APIRouter()
@@ -51,6 +53,7 @@ ALLOWED_MIME_TYPES = {
 @router.post("/upload", response_model=DocumentUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
     file: UploadFile = File(...),
+    store_id: Optional[int] = Query(None, description="Store ID to upload document to"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -58,10 +61,11 @@ async def upload_document(
     Upload a new document
     
     - **file**: Document file (PDF, DOCX, XLSX, TXT, PNG, JPG)
+    - **store_id**: Target store ID (optional for now, will be required after migration)
     - **Max size**: Configured in settings (default 10MB)
     - Returns document information with upload status
     """
-    logger.info(f"📤 Upload request from user {current_user.username} (id={current_user.id}): {file.filename}")
+    logger.info(f"📤 Upload request from user {current_user.username} (id={current_user.id}): {file.filename}, store_id={store_id}")
     
     # Validate file presence
     if not file or not file.filename:
@@ -100,6 +104,16 @@ async def upload_document(
                 detail="File is empty"
             )
         
+        # Verify store if store_id provided
+        if store_id:
+            store = store_service.get_store_by_id(db, store_id, current_user.id)
+            if not store:
+                logger.warning(f"❌ Upload failed: Store {store_id} not found")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Store with id {store_id} not found"
+                )
+        
         logger.info(f"📊 File size: {file_size / 1024:.2f} KB")
         
         # Upload to storage (S3 or local)
@@ -121,7 +135,8 @@ async def upload_document(
             file_path=file_path,
             file_type=file_extension.lstrip('.'),
             file_size=file_size,
-            status=ProcessingStatus.UPLOADED
+            status=ProcessingStatus.UPLOADED,
+            store_id=store_id  # Can be None for now
         )
         
         db.add(db_document)
@@ -169,7 +184,8 @@ async def list_documents(
     logger.info(f"📋 List documents request from user {current_user.username} (page={page}, size={page_size})")
     
     try:
-        # Base query - user's documents only
+        # Base query - user's documents only, eagerly load store relationship
+        from app.models.store import DocumentStore
         query = db.query(Document).filter(Document.user_id == current_user.id)
         
         # Apply status filter if provided (convert lowercase to uppercase for enum match)
@@ -185,7 +201,7 @@ async def list_documents(
         total_pages = (total + page_size - 1) // page_size
         offset = (page - 1) * page_size
         
-        # Get documents for current page
+        # Get documents for current page with store info
         documents = query.order_by(Document.upload_date.desc()).offset(offset).limit(page_size).all()
         
         # Convert to summary format
@@ -198,7 +214,8 @@ async def list_documents(
                 upload_date=doc.upload_date,
                 status=doc.status,
                 error_message=doc.error_message,
-                is_ready_for_query=doc.is_ready_for_query
+                is_ready_for_query=doc.is_ready_for_query,
+                store_name=doc.store.name if doc.store else None
             )
             for doc in documents
         ]
@@ -577,4 +594,63 @@ async def retry_document_indexing(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to start indexing: {str(e)}"
+        )
+
+
+@router.patch("/{document_id}/move", response_model=DocumentResponse)
+async def move_document(
+    document_id: int,
+    move_data: MoveDocumentRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Move document to another store
+    
+    - **store_id**: Target store ID (must belong to the same user)
+    """
+    logger.info(f"📦 Move document: document_id={document_id}, target_store={move_data.store_id}, user={current_user.username}")
+    
+    try:
+        # Move the document
+        success = store_service.move_document(
+            db,
+            document_id=document_id,
+            target_store_id=move_data.store_id,
+            user_id=current_user.id
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document or target store not found"
+            )
+        
+        # Get updated document
+        document = db.query(Document).filter(Document.id == document_id).first()
+        
+        return DocumentResponse(
+            id=document.id,
+            user_id=document.user_id,
+            filename=document.filename,
+            file_path=document.file_path,
+            file_type=document.file_type,
+            file_size=document.file_size,
+            upload_date=document.upload_date,
+            last_modified=document.updated_at or document.upload_date,
+            status=document.status,
+            error_message=document.error_message,
+            page_count=document.page_count,
+            word_count=document.word_count,
+            file_size_mb=document.file_size_mb,
+            is_ready_for_query=document.status == ProcessingStatus.INDEXED
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Failed to move document: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to move document: {str(e)}"
         )

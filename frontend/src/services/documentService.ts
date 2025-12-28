@@ -18,13 +18,18 @@ import type {
  */
 export const uploadDocument = async (
   file: File,
-  onProgress?: (percentage: number) => void
+  onProgress?: (percentage: number) => void,
+  storeId?: number
 ): Promise<DocumentUploadResponse> => {
   const formData = new FormData();
   formData.append('file', file);
 
+  const url = storeId 
+    ? `/api/v1/documents/upload?store_id=${storeId}`
+    : '/api/v1/documents/upload';
+
   const response = await api.post<DocumentUploadResponse>(
-    '/api/v1/documents/upload',
+    url,
     formData,
     {
       headers: {

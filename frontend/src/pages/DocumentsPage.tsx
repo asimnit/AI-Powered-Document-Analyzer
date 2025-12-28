@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDropzone } from 'react-dropzone';
 import documentService from '../services/documentService';
 import type { Document, ProcessingStatus } from '../types/document';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -39,10 +38,6 @@ const DocumentsPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ProcessingStatus | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadSuccess, setUploadSuccess] = useState<string[]>([]);
 
   // WebSocket connection for real-time updates
   const handleDocumentUpdate = useCallback((update: any) => {
@@ -69,90 +64,6 @@ const DocumentsPage: React.FC = () => {
   }, []);
 
   const { isConnected } = useWebSocket(handleDocumentUpdate);
-
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (acceptedFiles.length === 0) return;
-
-    // Validate file types and sizes
-    const allowedTypes = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/plain',
-      'image/png',
-      'image/jpeg',
-      'image/jpg'
-    ];
-
-    const invalidFiles = acceptedFiles.filter(file => !allowedTypes.includes(file.type));
-    const oversizedFiles = acceptedFiles.filter(file => file.size > 10 * 1024 * 1024);
-
-    if (invalidFiles.length > 0) {
-      setUploadError(`Invalid file type(s): ${invalidFiles.map(f => f.name).join(', ')}`);
-      return;
-    }
-
-    if (oversizedFiles.length > 0) {
-      setUploadError(`File(s) too large (max 10MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadError(null);
-    setUploadSuccess([]);
-    setUploadProgress({});
-
-    const successfulUploads: string[] = [];
-    const failedUploads: string[] = [];
-
-    // Upload files sequentially
-    for (const file of acceptedFiles) {
-      try {
-        const response = await documentService.uploadDocument(file, (percentage) => {
-          setUploadProgress(prev => ({ ...prev, [file.name]: percentage }));
-        });
-
-        successfulUploads.push(file.name);
-        setUploadSuccess(prev => [...prev, file.name]);
-      } catch (error: any) {
-        failedUploads.push(file.name);
-        console.error(`Failed to upload ${file.name}:`, error);
-      }
-    }
-
-    // Refresh documents list
-    await fetchDocuments();
-
-    // Show error if any uploads failed
-    if (failedUploads.length > 0) {
-      setUploadError(`Failed to upload: ${failedUploads.join(', ')}`);
-    }
-
-    // Clear messages after 5 seconds
-    setTimeout(() => {
-      setUploadSuccess([]);
-      setUploadProgress({});
-      setUploadError(null);
-    }, 5000);
-
-    setIsUploading(false);
-  }, []);
-
-  const { getRootProps, getInputProps, open } = useDropzone({
-    onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'text/plain': ['.txt'],
-      'image/png': ['.png'],
-      'image/jpeg': ['.jpg', '.jpeg'],
-    },
-    multiple: true,
-    disabled: isUploading,
-    noClick: true,
-    noKeyboard: true,
-  });
 
   useEffect(() => {
     fetchDocuments();
@@ -263,8 +174,6 @@ const DocumentsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <input {...getInputProps()} />
-      
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -273,66 +182,9 @@ const DocumentsPage: React.FC = () => {
               My Documents
             </span>
           </h1>
-          <p className="text-gray-600 mt-1">Manage and explore your uploaded documents</p>
+          <p className="text-gray-600 mt-1">View and manage documents from all your stores</p>
         </div>
-        
-        <button
-          onClick={open}
-          disabled={isUploading}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          {isUploading ? 'Uploading...' : 'Upload New'}
-        </button>
       </div>
-
-      {/* Upload Feedback */}
-      {uploadError && (
-        <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded-lg flex items-center gap-2">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          {uploadError}
-        </div>
-      )}
-      {uploadSuccess.length > 0 && (
-        <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded-lg">
-          <p className="flex items-center gap-2 font-semibold mb-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Successfully uploaded {uploadSuccess.length} file(s)
-          </p>
-          <ul className="ml-7 text-sm space-y-1">
-            {uploadSuccess.map((filename, idx) => (
-              <li key={idx}>✓ {filename}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {isUploading && Object.keys(uploadProgress).length > 0 && (
-        <div className="bg-blue-50 border border-blue-300 text-blue-800 px-4 py-3 rounded-lg">
-          <p className="font-semibold mb-2">Uploading files...</p>
-          <div className="space-y-2">
-            {Object.entries(uploadProgress).map(([filename, progress]) => (
-              <div key={filename}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="truncate max-w-xs">{filename}</span>
-                  <span>{progress}%</span>
-                </div>
-                <div className="w-full bg-blue-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-md p-4">
@@ -422,13 +274,12 @@ const DocumentsPage: React.FC = () => {
             </svg>
           </div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No documents found</h3>
-          <p className="text-gray-600 mb-4">Start by uploading your first document</p>
+          <p className="text-gray-600 mb-4">Upload documents through your document stores</p>
           <button
-            onClick={open}
-            disabled={isUploading}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => navigate('/stores')}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            {isUploading ? 'Uploading...' : 'Upload Document'}
+            Go to Document Stores
           </button>
         </div>
       ) : (
@@ -472,13 +323,21 @@ const DocumentsPage: React.FC = () => {
                   </div>
 
                   {/* File Name */}
-                  <h3 className="font-semibold text-gray-900 mb-2 truncate" title={doc.filename}>
+                  <h3 className="font-semibold text-gray-900 mb-3 truncate" title={doc.filename}>
                     {doc.filename}
                   </h3>
 
-                  {/* Status Badge */}
-                  <div className="mb-3">
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(doc.status)}`}>
+                  {/* Store Name & Status Badge */}
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    {doc.store_name && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium border border-blue-200">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                        {doc.store_name}
+                      </span>
+                    )}
+                    <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium border ${getStatusColor(doc.status)}`}>
                       {doc.status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                     </span>
                   </div>

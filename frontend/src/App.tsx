@@ -5,6 +5,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import DocumentsPage from './pages/DocumentsPage';
+import StoresListPage from './pages/StoresListPage';
+import StoreViewPage from './pages/StoreViewPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import { useAuthStore } from './store/authStore';
@@ -51,6 +53,10 @@ function App() {
         >
           {/* Index route - shows at "/" */}
           <Route index element={<HomePage />} />
+          
+          {/* Stores routes */}
+          <Route path="stores" element={<StoresListPage />} />
+          <Route path="stores/:storeId" element={<StoreViewPage />} />
           
           {/* Documents route - shows at "/documents" */}
           <Route path="documents" element={<DocumentsPage />} />

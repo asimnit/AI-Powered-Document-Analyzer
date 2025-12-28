@@ -79,6 +79,7 @@ class DocumentSummary(BaseModel):
     status: ProcessingStatus
     error_message: Optional[str] = None
     is_ready_for_query: bool
+    store_name: Optional[str] = None
     
     @field_serializer('status')
     def serialize_status(self, status: ProcessingStatus) -> str:

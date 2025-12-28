@@ -322,73 +322,74 @@ gantt
 ### Tasks
 
 #### 4.1 Azure OpenAI Setup
-- [ ] Create Azure OpenAI resource in Azure Portal
-- [ ] Deploy embedding model (text-embedding-3-small)
-- [ ] Deploy chat model (gpt-4o-mini)
-- [ ] Configure API keys and endpoints in .env
-- [ ] Set up rate limiting and error handling
-- [ ] Add cost tracking configuration (optional)
+- [x] Create Azure OpenAI resource in Azure Portal
+- [x] Deploy embedding model (text-embedding-3-small)
+- [ ] Deploy chat model (gpt-4o-mini) *(Deferred to Phase 5)*
+- [x] Configure API keys and endpoints in .env
+- [x] Set up rate limiting and error handling
+- [x] Add cost tracking configuration (optional)
 
 #### 4.2 LangChain Service Layer
-- [ ] Install LangChain packages (langchain, langchain-openai, langchain-community)
-- [ ] Create service layer structure (app/services/llm/)
-- [ ] Implement base abstract interfaces (BaseLLMProvider)
-- [ ] Build Azure OpenAI provider implementation
-- [ ] Create provider factory pattern
-- [ ] Add LLM configuration management
+- [x] Install LangChain packages (langchain, langchain-openai, langchain-community)
+- [x] Create service layer structure (app/services/llm/)
+- [x] Implement base abstract interfaces (BaseLLMProvider)
+- [x] Build Azure OpenAI provider implementation
+- [x] Create provider factory pattern
+- [x] Add LLM configuration management
 
 #### 4.3 PostgreSQL Vector Database Setup
-- [ ] Install pgvector extension in PostgreSQL Docker
-- [ ] Add pgvector Python package to requirements.txt
-- [ ] Update DocumentChunk model with embedding vector column
-- [ ] Create Alembic migration for vector support
-- [ ] Add vector similarity indices (IVFFlat for cosine similarity)
-- [ ] Test vector operations
+- [x] Install pgvector extension in PostgreSQL Docker
+- [x] Add pgvector Python package to requirements.txt
+- [x] Update DocumentChunk model with embedding vector column
+- [x] Create Alembic migration for vector support
+- [x] Add vector similarity indices (IVFFlat for cosine similarity)
+- [x] Test vector operations
 
 #### 4.4 Embedding Service
-- [ ] Create embedding service using LangChain Azure provider
-- [ ] Implement single text embedding generation
-- [ ] Add batch embedding generation (100 texts at a time)
-- [ ] Create embedding storage in DocumentChunk.embedding column
-- [ ] Add embedding metadata tracking
-- [ ] Implement retry logic for API failures
+- [x] Create embedding service using LangChain Azure provider
+- [x] Implement single text embedding generation
+- [x] Add batch embedding generation (100 texts at a time)
+- [x] Create embedding storage in DocumentChunk.embedding column
+- [x] Add embedding metadata tracking
+- [x] Implement retry logic for API failures
 
 #### 4.5 Indexing Pipeline
-- [ ] Create generate_embeddings_task in Celery
-- [ ] Trigger embedding generation after document processing
-- [ ] Generate embeddings for all document chunks
-- [ ] Store vectors in PostgreSQL with pgvector
-- [ ] Add indexing status tracking (INDEXED status)
-- [ ] Implement batch re-indexing for existing documents
-- [ ] Handle indexing failures with retry logic
-- [ ] Broadcast indexing status via WebSocket
+- [x] Create generate_embeddings_task in Celery
+- [x] Trigger embedding generation after document processing
+- [x] Generate embeddings for all document chunks
+- [x] Store vectors in PostgreSQL with pgvector
+- [x] Add indexing status tracking (INDEXED status)
+- [x] Implement batch re-indexing for existing documents
+- [x] Handle indexing failures with retry logic
+- [x] Broadcast indexing status via WebSocket
 
 #### 4.6 Semantic Search
-- [ ] Create search service with pgvector queries
-- [ ] Implement query embedding generation
-- [ ] Build vector similarity search (cosine similarity)
-- [ ] Add relevance scoring and ranking (top-k results)
-- [ ] Filter by user_id for security
-- [ ] Create search endpoint: POST /api/v1/search
-- [ ] Create search result schemas
+- [x] Create search service with pgvector queries
+- [x] Implement query embedding generation
+- [x] Build vector similarity search (cosine similarity)
+- [x] Add relevance scoring and ranking (top-k results)
+- [x] Filter by store_id for security
+- [x] Create search endpoint: POST /api/v1/stores/{store_id}/search
+- [x] Create search result schemas
+- [x] Add frontend search UI with expand/collapse functionality
 - [ ] Add search history tracking (optional)
 
-#### 4.7 RAG Implementation
-- [ ] Set up LangChain RAG chain
-- [ ] Implement context retrieval from pgvector
-- [ ] Build prompt templates for Q&A
-- [ ] Create RAG service with Azure OpenAI chat model
-- [ ] Add source attribution (document and chunk citations)
-- [ ] Implement conversation context management
-- [ ] Add confidence scoring
-- [ ] Prepare for streaming responses (Phase 5)
+#### 4.7 RAG Implementation *(Moved to Phase 5)*
+- [x] Implement context retrieval from pgvector *(via semantic search)*
+- [ ] Set up LangChain RAG chain *(Phase 5)*
+- [ ] Build prompt templates for Q&A *(Phase 5)*
+- [ ] Create RAG service with Azure OpenAI chat model *(Phase 5)*
+- [ ] Add source attribution (document and chunk citations) *(Phase 5)*
+- [ ] Implement conversation context management *(Phase 5)*
+- [ ] Add confidence scoring *(Phase 5)*
+- [ ] Prepare for streaming responses *(Phase 5)*
 
 #### 4.8 Testing & Validation
-- [ ] Test embedding generation with sample documents
-- [ ] Verify vector storage and retrieval
-- [ ] Test semantic search with various queries
-- [ ] Validate RAG responses for accuracy
-- [ ] Test with different document types
+- [x] Test embedding generation with sample documents
+- [x] Verify vector storage and retrieval
+- [x] Test semantic search with various queries
+- [ ] Validate RAG responses for accuracy *(Phase 5)*
+- [x] Test with different document types
 - [ ] Measure response times (<3 seconds)
 - [ ] Check cost per query
 
@@ -396,18 +397,31 @@ gantt
 - ✅ Multi-provider LLM service layer with Azure OpenAI
 - ✅ Vector embeddings stored in PostgreSQL (pgvector)
 - ✅ Semantic search endpoint functional
-- ✅ RAG pipeline generating accurate responses
+- ⏳ RAG pipeline generating accurate responses *(Moved to Phase 5)*
 - ✅ Automatic embedding generation after document processing
 - ✅ Search API with relevance ranking
 
 ### Success Criteria
-- Documents are automatically indexed with embeddings after processing
-- Semantic search returns relevant chunks (top 5-10 results)
-- Vector similarity search uses cosine distance
-- RAG pipeline generates accurate answers with proper context
-- Sources are properly cited with document and chunk references
-- Search/RAG responses are fast (<3 seconds)
-- Provider can be switched via configuration
+- ✅ Documents are automatically indexed with embeddings after processing
+- ✅ Semantic search returns relevant chunks (top 5 results via RAG_TOP_K config)
+- ✅ Vector similarity search uses cosine distance (<=> operator)
+- ⏳ RAG pipeline generates accurate answers with proper context *(Phase 5)*
+- ⏳ Sources are properly cited with document and chunk references *(Phase 5)*
+- ⏳ Search/RAG responses are fast (<3 seconds) *(Needs performance testing)*
+- ✅ Provider can be switched via configuration (Factory pattern)
+- ✅ All API calls logged and monitored
+- ⏳ Embedding costs are tracked and reasonable *(Needs cost analysis)*
+
+### Phase 4 Notes
+- **Status**: ✅ **COMPLETED** (Dec 28, 2025)
+- **Core Objectives Met**: Vector embeddings, semantic search, automatic indexing
+- **Key Achievements**:
+  - Implemented complete semantic search with pgvector cosine similarity
+  - Frontend UI includes search with expand/collapse functionality
+  - 10 concurrent Celery workers optimized for 20-core system
+  - Enhanced OCR with multi-strategy approach for better text extraction
+  - S3 integration with async file operations
+- **Deferred to Phase 5**: Full RAG implementation with conversational Q&A, chat models, and streaming responses
 - All API calls logged and monitored
 - Embedding costs are tracked and reasonable (<$1 per 1000 documents)
 

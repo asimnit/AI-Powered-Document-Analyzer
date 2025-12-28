@@ -48,6 +48,9 @@ class Document(Base):
     # Foreign Key - Owner of this document
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     
+    # Foreign Key - Store this document belongs to
+    store_id = Column(Integer, ForeignKey("document_stores.id", ondelete="CASCADE"), nullable=True, index=True)
+    
     # File Information
     filename = Column(String(255), nullable=False)              # Original filename (e.g., "report.pdf")
     file_path = Column(String(500), nullable=False, unique=True) # S3 key or storage path
@@ -82,6 +85,7 @@ class Document(Base):
     
     # Relationships
     user = relationship("User", back_populates="documents")
+    store = relationship("DocumentStore", back_populates="documents")
     chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
     # Future: queries = relationship("Query", back_populates="document")  # Q&A history
     

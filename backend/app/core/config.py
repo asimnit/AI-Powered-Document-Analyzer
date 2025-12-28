@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: set[str] = {".pdf", ".docx", ".xlsx", ".txt", ".png", ".jpg", ".jpeg"}
     
+    # Tesseract OCR Configuration
+    TESSERACT_CMD: Optional[str] = None  # Set in .env or leave None for auto-detection
+    
     # AWS S3 Configuration
     AWS_ACCESS_KEY_ID: str = "YOUR_AWS_ACCESS_KEY_ID"
     AWS_SECRET_ACCESS_KEY: str = "YOUR_AWS_SECRET_ACCESS_KEY"

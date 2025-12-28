@@ -45,6 +45,7 @@ class User(Base):
     
     # Relationships
     documents = relationship("Document", back_populates="user", cascade="all, delete-orphan")
+    document_stores = relationship("DocumentStore", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         """String representation for debugging"""
