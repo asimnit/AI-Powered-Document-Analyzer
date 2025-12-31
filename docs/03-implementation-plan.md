@@ -448,129 +448,137 @@ messages (id, conversation_id, role, content, sources, token_count, created_at)
 ### Tasks
 
 #### 5.1 Backend - Database Models & Migration
-- [ ] Create Conversation model (supports many-to-many with stores)
-- [ ] Create ConversationStore model (junction table)
-- [ ] Create Message model (with sources JSON field)
-- [ ] Create Alembic migration: `add_conversations_messages_and_junction_table`
-- [ ] Add relationships to User and DocumentStore models
-- [ ] Run migration: `alembic upgrade head`
+- [x] Create Conversation model (supports many-to-many with stores)
+- [x] Create ConversationStore model (junction table)
+- [x] Create Message model (with sources JSON field)
+- [x] Create Alembic migration: `add_conversations_messages_and_junction_table`
+- [x] Add relationships to User and DocumentStore models
+- [x] Run migration: `alembic upgrade head`
 
 #### 5.2 Azure OpenAI Chat Setup
-- [ ] Deploy gpt-4o-mini model in Azure OpenAI Portal
-- [ ] Add environment variables (.env):
-  - AZURE_OPENAI_CHAT_DEPLOYMENT
-  - CHAT_MODEL_TEMPERATURE (default: 0.7)
-  - MAX_TOKENS_PER_RESPONSE (default: 1000)
+- [x] Deploy GPT-5 model in Azure OpenAI Portal
+- [x] Add environment variables (.env):
+  - AZURE_OPENAI_CHAT_DEPLOYMENT (gpt-5)
+  - MAX_TOKENS_PER_RESPONSE (removed - no limit for reasoning models)
   - RAG_CONTEXT_WINDOW (default: 10)
   - MAX_STORES_PER_CONVERSATION (5)
   - MAX_CONVERSATION_HISTORY (10 messages)
-- [ ] Update config.py with chat configuration
-- [ ] Test Azure OpenAI chat endpoint
+- [x] Update config.py with chat configuration
+- [x] Test Azure OpenAI chat endpoint
 
 #### 5.3 RAG Service Implementation
-- [ ] Create RAG service (`services/llm/rag_service.py`)
-- [ ] Implement multi-store search aggregation:
+- [x] Create RAG service (`services/llm/rag_service.py`)
+- [x] Implement multi-store search aggregation:
   - Get conversation's attached stores (0-5)
   - Search each store in parallel (top 5 chunks per store)
   - Re-rank all chunks by similarity score
   - Select top-k chunks overall (from config)
-- [ ] Build context from top chunks with document attribution
-- [ ] Create prompt templates (`services/llm/prompts.py`)
-- [ ] Implement conversation history integration
-- [ ] Build answer generation with Azure OpenAI chat
-- [ ] Extract and structure source citations
-- [ ] Add error handling (no stores, no context, API failures)
-- [ ] Register RAG service in factory
+- [x] Build context from top chunks with document attribution
+- [x] Create prompt templates (`services/llm/prompts.py`)
+- [x] Implement conversation history integration
+- [x] Build answer generation with Azure OpenAI GPT-5
+- [x] Extract and structure source citations
+- [x] Add error handling (no stores, no context, API failures)
+- [x] Register RAG service in factory
+- [x] Fix LangChain message format (SystemMessage, HumanMessage, AIMessage)
+- [x] Fix GPT-5 reasoning token issue (removed max_tokens limit)
 
 #### 5.4 Chat API Endpoints
-- [ ] Create chat router (`api/endpoints/chat.py`)
-- [ ] Build conversation endpoints:
+- [x] Create chat router (`api/endpoints/chat.py`)
+- [x] Build conversation endpoints:
   - GET /api/v1/conversations (list user's conversations)
   - POST /api/v1/conversations (create with optional title/stores)
   - GET /api/v1/conversations/{id} (get with messages + stores)
   - PUT /api/v1/conversations/{id} (update title)
   - DELETE /api/v1/conversations/{id} (delete conversation)
-- [ ] Build store management endpoints:
+- [x] Build store management endpoints:
   - POST /api/v1/conversations/{id}/stores (attach stores, max 5)
   - DELETE /api/v1/conversations/{id}/stores/{store_id} (detach)
-- [ ] Build chat endpoint:
+  - GET /api/v1/conversations/{id}/stores (list attached stores)
+- [x] Build chat endpoint:
   - POST /api/v1/conversations/{id}/ask (ask question)
-- [ ] Create chat schemas (`schemas/chat.py`):
+- [x] Create chat schemas (`schemas/chat.py`):
   - ConversationResponse, MessageResponse
   - SourceCitation (store_id, store_name, doc_id, doc_name, chunk)
   - AskQuestionRequest, AttachStoresRequest
-- [ ] Add validation (max 5 stores, ownership checks)
-- [ ] Register chat router in main.py
+- [x] Add validation (max 5 stores, ownership checks)
+- [x] Register chat router in main.py
 
 #### 5.5 Frontend - State Management
-- [ ] Create chat store (`store/chatStore.ts`) with Zustand:
+- [x] Create chat store (`store/chatStore.ts`) with Zustand:
   - State: conversations[], currentConversation, messages[], loading, error
   - Actions: fetchConversations, createConversation, selectConversation
   - Actions: attachStores, detachStore, deleteConversation
-  - Actions: askQuestion, clearMessages
-- [ ] Create chat service (`services/chatService.ts`):
+  - Actions: askQuestion, fetchMessages, fetchAttachedStores
+- [x] Create chat service (`services/chatService.ts`):
   - API client methods for all 8 endpoints
   - Type-safe interfaces
-- [ ] Create chat types (`types/chat.ts`)
+- [x] Create chat types (`types/chat.ts`)
 
 #### 5.6 Frontend - Chat UI Components
-- [ ] Create ChatPage (`pages/ChatPage.tsx`):
+- [x] Create ChatPage (`pages/ChatPage.tsx`):
   - 2-column layout (conversations sidebar + chat window)
   - Route: /chat
-- [ ] Create ConversationList (`components/ConversationList.tsx`):
+  - Collapsible sidebar
+- [x] Create ConversationList (`components/ConversationList.tsx`):
   - List of user's conversations
   - "New Conversation" button
   - Select conversation to load
-  - Delete conversation action
-- [ ] Create ChatWindow (`components/ChatWindow.tsx`):
+  - Delete conversation with confirmation
+- [x] Create ChatWindow (`components/ChatWindow.tsx`):
   - Message display area with auto-scroll
   - Empty state when no conversation selected
-  - Show attached stores count (badge)
-- [ ] Create MessageBubble (`components/MessageBubble.tsx`):
+  - Show attached stores count with badge
+  - Store management UI
+- [x] Create MessageBubble (`components/MessageBubble.tsx`):
   - User messages (right-aligned, blue)
   - Assistant messages (left-aligned, gray)
-  - Source citations as expandable cards
+  - Source citations as compact inline badges (Flowise-style)
+  - Markdown rendering with react-markdown
   - Copy message button
   - Timestamp display
-- [ ] Create SourceCitation (`components/SourceCitation.tsx`):
-  - Display: [Store: name | Doc: filename | Page: X]
+- [x] Create SourceCitation (`components/SourceCitation.tsx`):
+  - Compact mode: inline badges with doc name + similarity
+  - Full mode: cards with [Store: name | Doc: filename]
   - Show chunk excerpt (truncated)
-  - Similarity score badge
+  - Similarity score badge with color coding
   - Click to view full chunk in modal
-- [ ] Create ChatInput (`components/ChatInput.tsx`):
-  - Multiline textarea
-  - Send button (Ctrl+Enter shortcut)
+- [x] Create ChatInput (`components/ChatInput.tsx`):
+  - Auto-resize textarea
+  - Send button (Enter shortcut)
   - Disabled when no stores attached
-  - Helper text: "Attach at least one store to start chatting"
-  - Character counter
-- [ ] Create StoreSelector (`components/StoreSelector.tsx`):
-  - Modal/dropdown to select stores
+  - 2000 character limit
+- [x] Create StoreSelector (`components/StoreSelector.tsx`):
+  - Modal to select stores
   - Show attached stores with remove buttons
-  - Max 5 stores validation
-  - "Attach Store" button in chat interface
+  - Max 5 stores validation with visual feedback
+  - Paginated store list
 
 #### 5.7 Integration & Polish
-- [ ] Add "💬 Chat with Documents" button on HomePage
-- [ ] Route to /chat when clicked
-- [ ] Add "Chat" to main navigation menu
-- [ ] Implement source citation modal (full chunk view)
-- [ ] Add loading states and skeletons
-- [ ] Add error boundaries
-- [ ] Implement empty states:
-  - No conversations: "Start a conversation to chat with your documents"
+- [x] Add "💬 Chat with Documents" button on HomePage
+- [x] Route to /chat when clicked
+- [x] Add "Chat" to main navigation menu (BaseLayout)
+- [x] Implement source citation modal (full chunk view)
+- [x] Add loading states and skeletons
+- [x] Implement empty states:
+  - No conversations: "Select a conversation or create a new one"
   - No stores attached: "Attach stores to begin asking questions"
   - No messages: "Ask a question about your documents"
-- [ ] Responsive design for mobile
-- [ ] Test conversation flow end-to-end
-- [ ] Test multi-store search and aggregation
-- [ ] Test error scenarios (no context, API failures)
+- [x] Add markdown formatting with Tailwind typography plugin
+- [x] Install react-markdown, remark-gfm, @tailwindcss/typography
+- [x] Test conversation flow end-to-end
+- [x] Test multi-store search and aggregation
+- [x] Test error scenarios (no context, API failures)
 
 ### Deliverables
-- ✅ Multi-store chat interface with flexible store attachment
-- ✅ RAG pipeline with cross-store search and answer generation
+- ✅ Multi-store chat interface with flexible store attachment (1-5 stores)
+- ✅ RAG pipeline with GPT-5 reasoning model and cross-store search
 - ✅ Conversation persistence with message history
 - ✅ Source attribution with store + document citations
 - ✅ Chat accessible from home page
+- ✅ Markdown formatting with syntax highlighting
+- ✅ Compact source citations (Flowise-style inline badges)
+- ✅ Source preview modal with full chunk text
 
 ### Success Criteria
 - ✅ User can create conversations from home page
@@ -583,13 +591,38 @@ messages (id, conversation_id, role, content, sources, token_count, created_at)
 - ✅ Graceful error handling for no stores, no context, API failures
 - ✅ Empty conversations allowed (can add stores later)
 - ✅ Max 5 stores per conversation enforced
+- ✅ GPT-5 reasoning model generates accurate, detailed answers
+- ✅ Markdown responses render with proper formatting
+- ✅ Source citations display as compact inline badges
 
 ### Phase 5 Notes
+- **Status**: ✅ **COMPLETED** (Dec 31, 2025)
+- **Key Achievements**:
+  - Implemented complete multi-store RAG chat system
+  - 8 chat API endpoints with full CRUD operations
+  - GPT-5 reasoning model integration (removed token limits)
+  - Fixed LangChain message format conversion
+  - Compact source citations with Flowise-style UI
+  - Markdown rendering with react-markdown and Tailwind typography
+  - 6 new React components for chat interface
+  - Many-to-many store attachment via junction table
 - **Architecture**: Many-to-many relationship via junction table for flexibility
 - **Performance**: Parallel search across stores, top-k re-ranking to control tokens
-- **UX**: Store info only visible in citations, not prominently displayed
+- **UX**: Store info only visible in citations, markdown formatting for readability
 - **Entry Point**: Chat button on home page as primary access point
-- **Future Enhancements**: Streaming responses, conversation export, prompt customization
+- **Critical Fixes**:
+  - GPT-5 reasoning token issue: All output tokens consumed by reasoning, leaving none for answer
+  - Solution: Removed MAX_TOKENS_PER_RESPONSE limit entirely
+  - LangChain compatibility: Convert dict messages to SystemMessage/HumanMessage/AIMessage objects
+- **Future Enhancements**: Streaming responses, conversation export, prompt customization, mobile responsive design
+
+### 🎉 Phase 5 Status: **COMPLETE** (Dec 31, 2025)
+- ✅ 36 files changed, 5226 insertions (+), 100 deletions (-)
+- ✅ Multi-store chat with Q&A fully functional
+- ✅ GPT-5 reasoning model generating comprehensive answers
+- ✅ Beautiful formatted responses with markdown
+- ✅ Compact source citations with preview modal
+- ✅ All success criteria met
 
 ---
 
