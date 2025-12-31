@@ -15,7 +15,6 @@ import type {
   ProcessAllResponse,
   RetryAllFailedResponse,
   RetryAllIndexingResponse,
-  SearchRequest,
   SearchResponse
 } from '../types/store';
 import type { DocumentListResponse, ProcessingStatus } from '../types/document';

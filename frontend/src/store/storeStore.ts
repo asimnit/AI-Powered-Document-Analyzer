@@ -25,7 +25,7 @@ interface StoreState {
   clearError: () => void;
 }
 
-export const useStoreStore = create<StoreState>((set, get) => ({
+export const useStoreStore = create<StoreState>((set) => ({
   stores: [],
   currentStore: null,
   isLoading: false,

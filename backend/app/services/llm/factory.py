@@ -2,6 +2,7 @@
 LLM Provider Factory
 
 Factory pattern for creating LLM provider instances based on configuration
+Includes RAG service for chat capabilities
 """
 
 import logging
@@ -38,3 +39,14 @@ def get_llm_provider() -> BaseLLMProvider:
             f"Unsupported LLM provider: {provider_name}. "
             f"Supported providers: azure"
         )
+
+
+def get_rag_service():
+    """
+    Get RAG service instance for chat
+    
+    Returns:
+        RAGService singleton instance
+    """
+    from app.services.llm.rag_service import rag_service
+    return rag_service

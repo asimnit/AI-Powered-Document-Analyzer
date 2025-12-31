@@ -7,6 +7,7 @@ import AboutPage from './pages/AboutPage';
 import DocumentsPage from './pages/DocumentsPage';
 import StoresListPage from './pages/StoresListPage';
 import StoreViewPage from './pages/StoreViewPage';
+import ChatPage from './pages/ChatPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import { useAuthStore } from './store/authStore';
@@ -53,6 +54,9 @@ function App() {
         >
           {/* Index route - shows at "/" */}
           <Route index element={<HomePage />} />
+          
+          {/* Chat route - shows at "/chat" */}
+          <Route path="chat" element={<ChatPage />} />
           
           {/* Stores routes */}
           <Route path="stores" element={<StoresListPage />} />

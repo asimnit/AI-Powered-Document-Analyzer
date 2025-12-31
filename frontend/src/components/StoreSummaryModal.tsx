@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import storeService from '../services/storeService';
-import type { StoreDetail, StoreStatusBreakdown } from '../types/store';
+import type { StoreDetail } from '../types/store';
 
 interface StoreSummaryModalProps {
   isOpen: boolean;

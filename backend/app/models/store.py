@@ -42,6 +42,7 @@ class DocumentStore(Base):
     # Relationships
     user = relationship("User", back_populates="document_stores")
     documents = relationship("Document", back_populates="store", cascade="all, delete-orphan")
+    conversations = relationship("Conversation", secondary="conversation_stores", back_populates="stores")
     
     def __repr__(self):
         return f"<DocumentStore(id={self.id}, name='{self.name}', user_id={self.user_id})>"

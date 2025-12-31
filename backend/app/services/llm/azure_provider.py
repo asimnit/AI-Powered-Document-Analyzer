@@ -9,6 +9,7 @@ from typing import List, Dict, Optional
 
 from langchain_openai import AzureOpenAIEmbeddings, AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 from app.services.llm.base import BaseLLMProvider
 from app.core.config import settings
@@ -43,8 +44,7 @@ class AzureOpenAIProvider(BaseLLMProvider):
             api_key=settings.AZURE_OPENAI_API_KEY,
             api_version=settings.AZURE_OPENAI_API_VERSION,
             azure_deployment=settings.AZURE_CHAT_DEPLOYMENT,
-            temperature=settings.RAG_TEMPERATURE,
-            max_tokens=settings.RAG_MAX_TOKENS,
+            # No max_tokens limit - let model use full capacity
         )
         
         logger.info(f"✅ Azure OpenAI initialized: {settings.AZURE_OPENAI_ENDPOINT}")
@@ -107,15 +107,40 @@ class AzureOpenAIProvider(BaseLLMProvider):
         try:
             logger.debug(f"Getting chat completion ({len(messages)} messages)")
             
+            # Convert dict messages to LangChain message objects
+            langchain_messages = []
+            for msg in messages:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")
+                
+                if role == "system":
+                    langchain_messages.append(SystemMessage(content=content))
+                elif role == "assistant":
+                    langchain_messages.append(AIMessage(content=content))
+                else:  # user
+                    langchain_messages.append(HumanMessage(content=content))
+            
             # Update parameters if provided
-            if temperature is not None:
-                self.chat.temperature = temperature
+            # Note: GPT-5 only supports default temperature (1)
             if max_tokens is not None:
                 self.chat.max_tokens = max_tokens
             
-            response = await self.chat.ainvoke(messages)
-            logger.debug(f"✅ Chat completion received ({len(response.content)} chars)")
-            return response.content
+            logger.info(f"🤖 Invoking Azure OpenAI with {len(langchain_messages)} messages")
+            response = await self.chat.ainvoke(langchain_messages)
+            
+            # Debug: Log the full response structure
+            logger.info(f"📦 Response type: {type(response)}")
+            logger.info(f"📦 Response object: {response}")
+            logger.info(f"📦 Response dict: {response.__dict__ if hasattr(response, '__dict__') else 'N/A'}")
+            logger.info(f"📦 Response content type: {type(response.content) if hasattr(response, 'content') else 'N/A'}")
+            logger.info(f"📦 Response content: '{response.content}'" if hasattr(response, 'content') else 'No content attr')
+            
+            answer = response.content if response.content else ""
+            logger.info(f"✅ Chat completion received: {len(answer)} chars")
+            logger.debug(f"Response preview: {answer[:200]}")
+            
+            return answer
+            
         except Exception as e:
             logger.error(f"❌ Failed to get chat completion: {e}")
             raise

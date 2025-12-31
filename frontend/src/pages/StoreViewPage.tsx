@@ -5,7 +5,7 @@ import { useStoreStore } from '../store/storeStore';
 import storeService from '../services/storeService';
 import documentService from '../services/documentService';
 import type { Document, ProcessingStatus } from '../types/document';
-import type { SearchResponse, SearchResultItem } from '../types/store';
+import type { SearchResultItem } from '../types/store';
 import { useWebSocket } from '../hooks/useWebSocket';
 
 /**
@@ -193,7 +193,7 @@ const StoreViewPage: React.FC = () => {
     setIsUploading(false);
   }, [storeId]);
 
-  const { getRootProps, getInputProps, open } = useDropzone({
+  const { getInputProps, open } = useDropzone({
     onDrop,
     accept: {
       'application/pdf': ['.pdf'],

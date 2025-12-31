@@ -65,16 +65,23 @@ class Settings(BaseSettings):
     AZURE_OPENAI_API_KEY: str = "your-azure-openai-api-key"
     AZURE_OPENAI_API_VERSION: str = "2024-02-15-preview"
     AZURE_EMBEDDING_DEPLOYMENT: str = "text-embedding-3-small"  # Your deployment name
-    AZURE_CHAT_DEPLOYMENT: str = "gpt-4o-mini"  # Your deployment name
+    AZURE_CHAT_DEPLOYMENT: str = "gpt-4o-mini"  # Your chat model deployment name
     
     # Embedding Configuration
     EMBEDDING_DIMENSION: int = 1536  # text-embedding-3-small dimension
     EMBEDDING_BATCH_SIZE: int = 100  # Process 100 texts at a time
     
     # RAG Configuration
-    RAG_TOP_K: int = 5  # Retrieve top 5 most relevant chunks
-    RAG_TEMPERATURE: float = 0.7  # LLM temperature for chat
+    RAG_TOP_K: int = 10  # Retrieve top 10 most relevant chunks across all stores
+    RAG_CONTEXT_WINDOW: int = 10  # Max chunks to include in context
+    RAG_TEMPERATURE: float = 0.7  # LLM temperature for chat (0.0-2.0)
     RAG_MAX_TOKENS: int = 1000  # Max tokens in response
+    
+    # Chat Configuration
+    MAX_STORES_PER_CONVERSATION: int = 5  # Maximum stores attachable to one conversation
+    MAX_CONVERSATION_HISTORY: int = 10  # Number of previous messages to include in context
+    CHAT_MODEL_TEMPERATURE: float = 0.7  # Chat model temperature
+    MAX_TOKENS_PER_RESPONSE: Optional[int] = None  # No limit - let model use its maximum capacity
     
     class Config:
         """Pydantic config"""

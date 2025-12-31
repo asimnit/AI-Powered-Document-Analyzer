@@ -429,71 +429,167 @@ gantt
 
 ## Phase 5: Q&A Interface & Chat
 **Duration**: Week 5 (Jan 6-12, 2026)  
-**Goal**: Build interactive chat interface for document Q&A
+**Goal**: Build interactive multi-store chat interface for document Q&A with RAG
+
+### Architecture Overview
+- **Multi-Store Support**: Conversations can have 1-5 stores attached (many-to-many)
+- **Flexible Creation**: Empty conversations allowed, attach stores anytime
+- **RAG Pipeline**: Search across multiple stores, aggregate results, generate answers
+- **Navigation**: Chat button on home page as primary entry point
+- **Source Display**: Store info only shown in source citations (not always visible)
+
+### Database Schema
+```
+conversations (id, user_id, title, created_at, updated_at)
+conversation_stores (id, conversation_id, store_id, attached_at) [Junction Table]
+messages (id, conversation_id, role, content, sources, token_count, created_at)
+```
 
 ### Tasks
 
-#### 5.1 Backend - Chat API
-- [ ] Create Conversation model
-- [ ] Create Message model
-- [ ] Build POST /api/chat/query endpoint
-- [ ] Implement streaming response
-- [ ] Add conversation history management
-- [ ] Create context window management
-- [ ] Implement multi-document querying
+#### 5.1 Backend - Database Models & Migration
+- [ ] Create Conversation model (supports many-to-many with stores)
+- [ ] Create ConversationStore model (junction table)
+- [ ] Create Message model (with sources JSON field)
+- [ ] Create Alembic migration: `add_conversations_messages_and_junction_table`
+- [ ] Add relationships to User and DocumentStore models
+- [ ] Run migration: `alembic upgrade head`
 
-#### 5.2 Chat Service
-- [ ] Create chat service class
-- [ ] Implement query processing
-- [ ] Add conversation context
-- [ ] Build response generation
-- [ ] Implement citation extraction
-- [ ] Add confidence scoring
+#### 5.2 Azure OpenAI Chat Setup
+- [ ] Deploy gpt-4o-mini model in Azure OpenAI Portal
+- [ ] Add environment variables (.env):
+  - AZURE_OPENAI_CHAT_DEPLOYMENT
+  - CHAT_MODEL_TEMPERATURE (default: 0.7)
+  - MAX_TOKENS_PER_RESPONSE (default: 1000)
+  - RAG_CONTEXT_WINDOW (default: 10)
+  - MAX_STORES_PER_CONVERSATION (5)
+  - MAX_CONVERSATION_HISTORY (10 messages)
+- [ ] Update config.py with chat configuration
+- [ ] Test Azure OpenAI chat endpoint
 
-#### 5.3 Frontend - Chat UI
-- [ ] Create chat page component
-- [ ] Build message list component
-- [ ] Create message input component
-- [ ] Add typing indicator
-- [ ] Implement auto-scroll
-- [ ] Display citations inline
-- [ ] Add copy message functionality
+#### 5.3 RAG Service Implementation
+- [ ] Create RAG service (`services/llm/rag_service.py`)
+- [ ] Implement multi-store search aggregation:
+  - Get conversation's attached stores (0-5)
+  - Search each store in parallel (top 5 chunks per store)
+  - Re-rank all chunks by similarity score
+  - Select top-k chunks overall (from config)
+- [ ] Build context from top chunks with document attribution
+- [ ] Create prompt templates (`services/llm/prompts.py`)
+- [ ] Implement conversation history integration
+- [ ] Build answer generation with Azure OpenAI chat
+- [ ] Extract and structure source citations
+- [ ] Add error handling (no stores, no context, API failures)
+- [ ] Register RAG service in factory
 
-#### 5.4 Real-time Chat
-- [ ] Set up Socket.io server
-- [ ] Create chat WebSocket handlers
-- [ ] Implement message streaming
-- [ ] Add typing indicators
-- [ ] Handle connection drops
-- [ ] Implement message queue
+#### 5.4 Chat API Endpoints
+- [ ] Create chat router (`api/endpoints/chat.py`)
+- [ ] Build conversation endpoints:
+  - GET /api/v1/conversations (list user's conversations)
+  - POST /api/v1/conversations (create with optional title/stores)
+  - GET /api/v1/conversations/{id} (get with messages + stores)
+  - PUT /api/v1/conversations/{id} (update title)
+  - DELETE /api/v1/conversations/{id} (delete conversation)
+- [ ] Build store management endpoints:
+  - POST /api/v1/conversations/{id}/stores (attach stores, max 5)
+  - DELETE /api/v1/conversations/{id}/stores/{store_id} (detach)
+- [ ] Build chat endpoint:
+  - POST /api/v1/conversations/{id}/ask (ask question)
+- [ ] Create chat schemas (`schemas/chat.py`):
+  - ConversationResponse, MessageResponse
+  - SourceCitation (store_id, store_name, doc_id, doc_name, chunk)
+  - AskQuestionRequest, AttachStoresRequest
+- [ ] Add validation (max 5 stores, ownership checks)
+- [ ] Register chat router in main.py
 
-#### 5.5 Conversation Management
-- [ ] Create conversation list view
-- [ ] Add new conversation button
-- [ ] Implement conversation deletion
-- [ ] Add conversation export (JSON/PDF)
-- [ ] Create conversation search
-- [ ] Implement conversation sharing
+#### 5.5 Frontend - State Management
+- [ ] Create chat store (`store/chatStore.ts`) with Zustand:
+  - State: conversations[], currentConversation, messages[], loading, error
+  - Actions: fetchConversations, createConversation, selectConversation
+  - Actions: attachStores, detachStore, deleteConversation
+  - Actions: askQuestion, clearMessages
+- [ ] Create chat service (`services/chatService.ts`):
+  - API client methods for all 8 endpoints
+  - Type-safe interfaces
+- [ ] Create chat types (`types/chat.ts`)
 
-#### 5.6 Source Display
-- [ ] Create source card component
-- [ ] Add document preview modal
-- [ ] Highlight relevant text
-- [ ] Show page numbers
-- [ ] Add "view in document" link
+#### 5.6 Frontend - Chat UI Components
+- [ ] Create ChatPage (`pages/ChatPage.tsx`):
+  - 2-column layout (conversations sidebar + chat window)
+  - Route: /chat
+- [ ] Create ConversationList (`components/ConversationList.tsx`):
+  - List of user's conversations
+  - "New Conversation" button
+  - Select conversation to load
+  - Delete conversation action
+- [ ] Create ChatWindow (`components/ChatWindow.tsx`):
+  - Message display area with auto-scroll
+  - Empty state when no conversation selected
+  - Show attached stores count (badge)
+- [ ] Create MessageBubble (`components/MessageBubble.tsx`):
+  - User messages (right-aligned, blue)
+  - Assistant messages (left-aligned, gray)
+  - Source citations as expandable cards
+  - Copy message button
+  - Timestamp display
+- [ ] Create SourceCitation (`components/SourceCitation.tsx`):
+  - Display: [Store: name | Doc: filename | Page: X]
+  - Show chunk excerpt (truncated)
+  - Similarity score badge
+  - Click to view full chunk in modal
+- [ ] Create ChatInput (`components/ChatInput.tsx`):
+  - Multiline textarea
+  - Send button (Ctrl+Enter shortcut)
+  - Disabled when no stores attached
+  - Helper text: "Attach at least one store to start chatting"
+  - Character counter
+- [ ] Create StoreSelector (`components/StoreSelector.tsx`):
+  - Modal/dropdown to select stores
+  - Show attached stores with remove buttons
+  - Max 5 stores validation
+  - "Attach Store" button in chat interface
+
+#### 5.7 Integration & Polish
+- [ ] Add "💬 Chat with Documents" button on HomePage
+- [ ] Route to /chat when clicked
+- [ ] Add "Chat" to main navigation menu
+- [ ] Implement source citation modal (full chunk view)
+- [ ] Add loading states and skeletons
+- [ ] Add error boundaries
+- [ ] Implement empty states:
+  - No conversations: "Start a conversation to chat with your documents"
+  - No stores attached: "Attach stores to begin asking questions"
+  - No messages: "Ask a question about your documents"
+- [ ] Responsive design for mobile
+- [ ] Test conversation flow end-to-end
+- [ ] Test multi-store search and aggregation
+- [ ] Test error scenarios (no context, API failures)
 
 ### Deliverables
-- ✅ Interactive chat interface
-- ✅ Real-time message streaming
-- ✅ Conversation history
-- ✅ Source attribution display
+- ✅ Multi-store chat interface with flexible store attachment
+- ✅ RAG pipeline with cross-store search and answer generation
+- ✅ Conversation persistence with message history
+- ✅ Source attribution with store + document citations
+- ✅ Chat accessible from home page
 
 ### Success Criteria
-- User can ask questions about documents
-- Responses stream in real-time
-- Sources are clearly displayed
-- Conversations are persisted
-- Multi-document queries work correctly
+- ✅ User can create conversations from home page
+- ✅ User can attach/detach 1-5 stores to any conversation
+- ✅ User can ask questions and receive AI-generated answers
+- ✅ Answers cite sources with store, document, and chunk info
+- ✅ RAG searches across all attached stores simultaneously
+- ✅ Conversation history persists across sessions
+- ✅ Response time < 5 seconds for typical queries
+- ✅ Graceful error handling for no stores, no context, API failures
+- ✅ Empty conversations allowed (can add stores later)
+- ✅ Max 5 stores per conversation enforced
+
+### Phase 5 Notes
+- **Architecture**: Many-to-many relationship via junction table for flexibility
+- **Performance**: Parallel search across stores, top-k re-ranking to control tokens
+- **UX**: Store info only visible in citations, not prominently displayed
+- **Entry Point**: Chat button on home page as primary access point
+- **Future Enhancements**: Streaming responses, conversation export, prompt customization
 
 ---
 
